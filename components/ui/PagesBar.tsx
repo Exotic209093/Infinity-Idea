@@ -19,6 +19,7 @@ import {
   Sparkles,
   StickyNote,
   GripVertical,
+  Copy,
 } from "lucide-react";
 
 type Props = {
@@ -90,6 +91,13 @@ export function PagesBar({ editor, onAddPageFromTemplate, onEditNotes }: Props) 
     if (!window.confirm(`Delete "${current.name}"? This can't be undone.`)) return;
     editor.markHistoryStoppingPoint("delete-page");
     editor.deletePage(current.id);
+    setMenuOpen(false);
+  };
+
+  const duplicateCurrent = () => {
+    editor.markHistoryStoppingPoint("duplicate-page");
+    editor.duplicatePage(current.id);
+    editor.zoomToFit({ animation: { duration: 300 } });
     setMenuOpen(false);
   };
 
@@ -246,6 +254,15 @@ export function PagesBar({ editor, onAddPageFromTemplate, onEditNotes }: Props) 
                 >
                   <StickyNote size={12} /> Notes
                 </button>
+                <button
+                  onClick={duplicateCurrent}
+                  className="btn-ghost flex flex-1 items-center justify-center gap-1.5 rounded-md px-2 py-1.5 text-xs font-semibold"
+                  title="Duplicate this page and its content"
+                >
+                  <Copy size={12} /> Duplicate
+                </button>
+              </div>
+              <div className="flex items-center gap-1 border-t border-white/10 p-1">
                 <button
                   onClick={() => {
                     renameCurrent();

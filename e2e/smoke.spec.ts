@@ -21,7 +21,7 @@ test.describe("Infinite Idea — smoke", () => {
     // Save triggers a download of the .infidoc.json file
     const [download] = await Promise.all([
       page.waitForEvent("download"),
-      page.getByRole("button", { name: /^Save/ }).click(),
+      page.getByRole("button", { name: "Save", exact: true }).click(),
     ]);
     const name = download.suggestedFilename();
     expect(name).toMatch(/\.infidoc\.json$/);

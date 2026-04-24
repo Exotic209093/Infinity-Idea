@@ -23,6 +23,13 @@ import { ShortcutsDialog } from "@/components/ui/ShortcutsDialog";
 import { PagesBar } from "@/components/ui/PagesBar";
 import { PresentMode } from "@/components/ui/PresentMode";
 import { SpeakerNotesDialog } from "@/components/ui/SpeakerNotesDialog";
+import {
+  buildBlockFromSelection,
+  insertSavedBlock,
+  loadSavedBlocks,
+  saveBlocks,
+  type SavedBlock,
+} from "@/lib/savedBlocks";
 import { downloadSaveFile } from "@/lib/io/saveJson";
 import { loadSaveFileFromFile } from "@/lib/io/loadJson";
 import { exportPng, exportSvg } from "@/lib/io/exportImage";
@@ -52,6 +59,7 @@ export function CanvasEditor() {
   const [notesOpen, setNotesOpen] = useState(false);
   const [presentOpen, setPresentOpen] = useState(false);
   const [presentSnapshot, setPresentSnapshot] = useState<unknown>(null);
+  const [savedBlocksVersion, setSavedBlocksVersion] = useState(0);
   const nextToastId = useRef(1);
 
   const pushToast = useCallback((text: string, kind: ToastMessage["kind"] = "info") => {
@@ -336,6 +344,38 @@ export function CanvasEditor() {
     [editor, pushToast],
   );
 
+  const onSaveAsBlock = useCallback(() => {
+    if (!editor) return;
+    if (editor.getSelectedShapes().length === 0) {
+      pushToast("Select something first", "error");
+      return;
+    }
+    const name = window.prompt("Name this block", "Untitled block");
+    if (!name) return;
+    const block = buildBlockFromSelection(editor, name.trim() || "Untitled block");
+    if (!block) {
+      pushToast("Nothing to save", "error");
+      return;
+    }
+    const existing = loadSavedBlocks();
+    saveBlocks([block, ...existing]);
+    setSavedBlocksVersion((v) => v + 1);
+    pushToast(`Saved "${block.name}" to your blocks`, "success");
+  }, [editor, pushToast]);
+
+  const onInsertSavedBlock = useCallback(
+    (block: SavedBlock) => {
+      if (!editor) return;
+      try {
+        insertSavedBlock(editor, block);
+        pushToast(`Inserted "${block.name}"`, "success");
+      } catch {
+        pushToast("Could not insert block — it may be invalid.", "error");
+      }
+    },
+    [editor, pushToast],
+  );
+
   const shapeUtils = useMemo(() => customShapeUtils, []);
 
   const tldrawComponents = useMemo<TLComponents>(
@@ -387,9 +427,15 @@ export function CanvasEditor() {
         onSelectTool={onSelectTool}
         onInsertCustom={onInsertCustom}
         onUploadImage={onUploadImage}
+        onInsertSavedBlock={onInsertSavedBlock}
+        savedBlocksVersion={savedBlocksVersion}
       />
 
-      <InspectorPanel editor={editor} selectedShape={selected} />
+      <InspectorPanel
+        editor={editor}
+        selectedShape={selected}
+        onSaveAsBlock={onSaveAsBlock}
+      />
 
       <PagesBar
         editor={editor}

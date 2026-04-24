@@ -1,6 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import {
+  loadSavedBlocks,
+  saveBlocks,
+  type SavedBlock,
+} from "@/lib/savedBlocks";
 import {
   Square,
   Circle,
@@ -21,15 +26,19 @@ import {
   Table as TableIcon,
   Quote as QuoteIcon,
   TrendingUp,
+  Bookmark,
+  X as XIcon,
 } from "lucide-react";
 import { CUSTOM_SHAPE_TYPES } from "@/types/shapes";
 
-type Tab = "shapes" | "diagrams" | "blocks";
+type Tab = "shapes" | "diagrams" | "blocks" | "saved";
 
 type Props = {
   onSelectTool: (toolId: string) => void;
   onInsertCustom: (shapeType: string) => void;
   onUploadImage: (file: File) => void;
+  onInsertSavedBlock: (block: SavedBlock) => void;
+  savedBlocksVersion: number; // bump to force a reload from storage
 };
 
 const shapeItems: Array<{ id: string; label: string; icon: React.ReactNode }> = [
@@ -68,8 +77,25 @@ const blockItems: Array<{
   { type: CUSTOM_SHAPE_TYPES.quote, label: "Quote", hint: "Pull quote + attribution", icon: <QuoteIcon size={16} /> },
 ];
 
-export function ToolboxPanel({ onSelectTool, onInsertCustom, onUploadImage }: Props) {
+export function ToolboxPanel({
+  onSelectTool,
+  onInsertCustom,
+  onUploadImage,
+  onInsertSavedBlock,
+  savedBlocksVersion,
+}: Props) {
   const [tab, setTab] = useState<Tab>("blocks");
+  const [savedBlocks, setSavedBlocks] = useState<SavedBlock[]>([]);
+
+  useEffect(() => {
+    setSavedBlocks(loadSavedBlocks());
+  }, [savedBlocksVersion]);
+
+  const deleteSavedBlock = (id: string) => {
+    const next = savedBlocks.filter((b) => b.id !== id);
+    setSavedBlocks(next);
+    saveBlocks(next);
+  };
 
   return (
     <div className="glass-strong animate-slide-in-left pointer-events-auto absolute left-3 top-20 z-10 hidden w-64 flex-col overflow-hidden rounded-2xl shadow-glass md:flex"
@@ -83,6 +109,9 @@ export function ToolboxPanel({ onSelectTool, onInsertCustom, onUploadImage }: Pr
         </TabButton>
         <TabButton active={tab === "blocks"} onClick={() => setTab("blocks")}>
           Blocks
+        </TabButton>
+        <TabButton active={tab === "saved"} onClick={() => setTab("saved")}>
+          Saved
         </TabButton>
       </div>
 
@@ -106,6 +135,59 @@ export function ToolboxPanel({ onSelectTool, onInsertCustom, onUploadImage }: Pr
                 <div className="text-xs text-white/80">{s.label}</div>
               </ToolCard>
             ))}
+          </div>
+        )}
+
+        {tab === "saved" && (
+          <div className="flex flex-col gap-1.5">
+            {savedBlocks.length === 0 ? (
+              <div className="px-1 py-4 text-center text-xs text-white/50">
+                <Bookmark size={20} className="mx-auto mb-2 text-white/35" />
+                Select shapes on the canvas, then click
+                <br />
+                <span className="font-semibold text-white/70">
+                  &ldquo;Save as block&rdquo;
+                </span>{" "}
+                in the inspector.
+              </div>
+            ) : (
+              savedBlocks.map((b) => (
+                <div
+                  key={b.id}
+                  className="toolbox-block group relative flex items-center gap-3 rounded-lg border border-white/5 bg-white/5 p-3 text-left hover:border-white/20 hover:bg-white/10"
+                >
+                  <button
+                    onClick={() => onInsertSavedBlock(b)}
+                    className="flex flex-1 items-center gap-3 text-left"
+                  >
+                    <div
+                      className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-md"
+                      style={{
+                        background:
+                          "linear-gradient(135deg, rgba(34,211,238,0.4), rgba(108,99,255,0.4))",
+                      }}
+                    >
+                      <Bookmark size={14} />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="truncate text-sm font-semibold">
+                        {b.name}
+                      </div>
+                      <div className="text-xs text-white/50">
+                        {b.shapes.length} shape{b.shapes.length === 1 ? "" : "s"}
+                      </div>
+                    </div>
+                  </button>
+                  <button
+                    onClick={() => deleteSavedBlock(b.id)}
+                    className="btn-ghost flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-md opacity-0 transition group-hover:opacity-100"
+                    title="Delete saved block"
+                  >
+                    <XIcon size={12} />
+                  </button>
+                </div>
+              ))
+            )}
           </div>
         )}
 

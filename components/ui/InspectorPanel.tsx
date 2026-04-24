@@ -2,14 +2,20 @@
 
 import { useMemo } from "react";
 import type { Editor, TLShape } from "tldraw";
+import { Bookmark } from "lucide-react";
 import { CUSTOM_SHAPE_TYPES } from "@/types/shapes";
 
 type Props = {
   editor: Editor | null;
   selectedShape: TLShape | null;
+  onSaveAsBlock: () => void;
 };
 
-export function InspectorPanel({ editor, selectedShape }: Props) {
+export function InspectorPanel({
+  editor,
+  selectedShape,
+  onSaveAsBlock,
+}: Props) {
   const title = useMemo(() => {
     if (!selectedShape) return "No selection";
     const t = selectedShape.type;
@@ -43,7 +49,17 @@ export function InspectorPanel({ editor, selectedShape }: Props) {
             Select something on the canvas to edit it.
           </p>
         ) : (
-          <ShapeFields editor={editor} shape={selectedShape} />
+          <>
+            <ShapeFields editor={editor} shape={selectedShape} />
+            <button
+              onClick={onSaveAsBlock}
+              className="btn-ghost mt-4 flex w-full items-center justify-center gap-2 rounded-lg px-3 py-2 text-xs font-semibold"
+              title="Save the current selection as a reusable block"
+            >
+              <Bookmark size={12} />
+              Save as block
+            </button>
+          </>
         )}
       </div>
     </div>
