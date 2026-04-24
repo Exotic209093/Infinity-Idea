@@ -6,6 +6,7 @@ export const CUSTOM_SHAPE_TYPES = {
   swimlane: "swimlane",
   titleBlock: "titleBlock",
   callout: "callout",
+  checklist: "checklist",
 } as const;
 
 export type CustomShapeType =

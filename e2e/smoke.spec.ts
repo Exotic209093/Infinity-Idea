@@ -57,6 +57,34 @@ test.describe("Infinite Idea — smoke", () => {
     await expect(page.getByText("Keyboard shortcuts")).toBeHidden();
   });
 
+  test("PagesBar adds a new page and the count increments", async ({ page }) => {
+    await page.goto("/");
+    await expect(page.locator(".tl-container")).toBeVisible({ timeout: 30_000 });
+
+    await expect(page.getByTitle("Pages")).toContainText("1 / 1");
+    await page.getByTitle("Add new page").click();
+    await expect(page.getByTitle("Pages")).toContainText("2 / 2");
+  });
+
+  test("Present button enters presentation mode with snapshot content", async ({
+    page,
+  }) => {
+    await page.goto("/");
+    await expect(page.locator(".tl-container")).toBeVisible({ timeout: 30_000 });
+
+    // Need at least one shape for presentation mode to open
+    await page.getByRole("button", { name: /Title Block/ }).first().click();
+
+    await page.getByRole("button", { name: /^Present$/ }).click();
+    await expect(
+      page.locator('[aria-label="Presentation mode"]'),
+    ).toBeVisible({ timeout: 10_000 });
+    await expect(page.getByText(/^Presenting/)).toBeVisible();
+
+    await page.keyboard.press("Escape");
+    await expect(page.locator('[aria-label="Presentation mode"]')).toBeHidden();
+  });
+
   test("shows an error toast for an invalid save file", async ({ page }) => {
     await page.goto("/");
     await expect(page.locator(".tl-container")).toBeVisible({ timeout: 30_000 });

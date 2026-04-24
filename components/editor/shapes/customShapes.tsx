@@ -529,6 +529,141 @@ function withAlpha(hex: string, alpha: number): string {
   return `rgba(${r},${g},${b},${alpha})`;
 }
 
+/* ---------- Checklist ---------- */
+
+export type ChecklistShape = TLBaseShape<
+  "checklist",
+  {
+    w: number;
+    h: number;
+    label: string;
+    items: string;
+    checked: string;
+  }
+>;
+
+/*
+ * Items and checked states are serialized as strings (newline-delimited items,
+ * "1"/"0" flags) so the shape props remain primitive and round-trip cleanly.
+ */
+function splitItems(s: string): string[] {
+  return s.split("\n");
+}
+function splitChecked(s: string): boolean[] {
+  return s.split("").map((c) => c === "1");
+}
+function joinChecked(flags: boolean[]): string {
+  return flags.map((b) => (b ? "1" : "0")).join("");
+}
+
+export class ChecklistShapeUtil extends BaseBoxShapeUtil<ChecklistShape> {
+  static override type = CUSTOM_SHAPE_TYPES.checklist;
+  static override props: RecordProps<ChecklistShape> = {
+    ...baseProps,
+    items: T.string,
+    checked: T.string,
+  };
+  override getDefaultProps(): ChecklistShape["props"] {
+    const defaults = ["Kick-off meeting", "Share requirements", "Sign off"];
+    return {
+      w: 320,
+      h: 180,
+      label: "Onboarding checklist",
+      items: defaults.join("\n"),
+      checked: joinChecked(defaults.map(() => false)),
+    };
+  }
+  override getGeometry(shape: ChecklistShape) {
+    return baseGeometry(shape);
+  }
+  override onResize(shape: ChecklistShape, info: TLResizeInfo<ChecklistShape>) {
+    return onResize(shape, info);
+  }
+  override component(shape: ChecklistShape) {
+    const items = splitItems(shape.props.items);
+    const flags = splitChecked(shape.props.checked);
+    const toggle = (idx: number) => {
+      const next = [...flags];
+      next[idx] = !next[idx];
+      this.editor.updateShape<ChecklistShape>({
+        id: shape.id,
+        type: shape.type,
+        props: { checked: joinChecked(next) },
+      });
+    };
+    return (
+      <HTMLContainer
+        style={{
+          width: shape.props.w,
+          height: shape.props.h,
+          borderRadius: 16,
+          background: "rgba(20,20,32,0.7)",
+          border: "1px solid rgba(34,211,238,0.35)",
+          boxShadow: "0 4px 20px rgba(34,211,238,0.1)",
+          color: "#fff",
+          overflow: "hidden",
+          display: "flex",
+          flexDirection: "column",
+        }}
+      >
+        <div style={{ padding: "14px 18px 8px", fontSize: 13, fontWeight: 700, color: "rgba(255,255,255,0.9)" }}>
+          {shape.props.label}
+        </div>
+        <div style={{ flex: 1, overflow: "auto", padding: "0 18px 14px" }}>
+          {items.map((text, i) => (
+            <div
+              key={i}
+              style={{ display: "flex", alignItems: "center", gap: 10, padding: "6px 0" }}
+            >
+              <button
+                onPointerDown={(e) => {
+                  e.stopPropagation();
+                  toggle(i);
+                }}
+                style={{
+                  width: 18,
+                  height: 18,
+                  borderRadius: 5,
+                  border: flags[i]
+                    ? "1px solid #22d3ee"
+                    : "1px solid rgba(255,255,255,0.3)",
+                  background: flags[i]
+                    ? "linear-gradient(135deg,#22d3ee,#6c63ff)"
+                    : "transparent",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  cursor: "pointer",
+                  color: "#0b0b16",
+                  fontWeight: 900,
+                  fontSize: 12,
+                  flexShrink: 0,
+                }}
+                aria-pressed={flags[i] ? "true" : "false"}
+              >
+                {flags[i] ? "✓" : ""}
+              </button>
+              <span
+                style={{
+                  flex: 1,
+                  fontSize: 14,
+                  color: flags[i] ? "rgba(255,255,255,0.45)" : "rgba(255,255,255,0.9)",
+                  textDecoration: flags[i] ? "line-through" : "none",
+                }}
+              >
+                {text || <em style={{ opacity: 0.4 }}>Empty item</em>}
+              </span>
+            </div>
+          ))}
+        </div>
+      </HTMLContainer>
+    );
+  }
+  override indicator(shape: ChecklistShape) {
+    return <rect width={shape.props.w} height={shape.props.h} rx={16} />;
+  }
+}
+
 export const customShapeUtils = [
   ProcessStepShapeUtil,
   DecisionGateShapeUtil,
@@ -537,4 +672,5 @@ export const customShapeUtils = [
   SwimlaneShapeUtil,
   TitleBlockShapeUtil,
   CalloutShapeUtil,
+  ChecklistShapeUtil,
 ];

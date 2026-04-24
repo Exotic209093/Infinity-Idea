@@ -10,6 +10,7 @@ import {
   Redo2,
   LayoutTemplate,
   Keyboard,
+  Play,
 } from "lucide-react";
 import { FileMenu } from "./FileMenu";
 import { ExportMenu } from "./ExportMenu";
@@ -25,6 +26,7 @@ type Props = {
   onRedo: () => void;
   onOpenTemplates: () => void;
   onOpenShortcuts: () => void;
+  onPresent: () => void;
 };
 
 export function TopBar({
@@ -38,6 +40,7 @@ export function TopBar({
   onRedo,
   onOpenTemplates,
   onOpenShortcuts,
+  onPresent,
 }: Props) {
   const [fileOpen, setFileOpen] = useState(false);
   const [exportOpen, setExportOpen] = useState(false);
@@ -135,6 +138,14 @@ export function TopBar({
           title="Keyboard shortcuts (?)"
         >
           <Keyboard size={14} />
+        </button>
+
+        <button
+          className="btn-ghost flex items-center gap-2 rounded-lg px-3 py-1.5 text-sm"
+          onClick={onPresent}
+          title="Enter presentation mode"
+        >
+          <Play size={14} /> Present
         </button>
 
         <Separator />

@@ -20,6 +20,7 @@ export function InspectorPanel({ editor, selectedShape }: Props) {
     if (t === CUSTOM_SHAPE_TYPES.swimlane) return "Swimlane";
     if (t === CUSTOM_SHAPE_TYPES.titleBlock) return "Title Block";
     if (t === CUSTOM_SHAPE_TYPES.callout) return "Callout";
+    if (t === CUSTOM_SHAPE_TYPES.checklist) return "Checklist";
     return t.charAt(0).toUpperCase() + t.slice(1);
   }, [selectedShape]);
 
@@ -153,6 +154,21 @@ function ShapeFields({
             { label: "Success", value: "success" },
           ]}
           onChange={(v) => update({ tone: v })}
+        />
+      )}
+
+      {shape.type === CUSTOM_SHAPE_TYPES.checklist && (
+        <TextField
+          label="Items (one per line)"
+          value={String(props.items ?? "")}
+          onChange={(v) => {
+            const count = v.split("\n").length;
+            const prev = String(props.checked ?? "");
+            // Preserve existing check state; pad / trim to match new item count.
+            const normalized = (prev + "0".repeat(count)).slice(0, count);
+            update({ items: v, checked: normalized });
+          }}
+          multiline
         />
       )}
 

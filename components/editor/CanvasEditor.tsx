@@ -4,6 +4,7 @@ import dynamic from "next/dynamic";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   GeoShapeGeoStyle,
+  getSnapshot,
   type Editor,
   type TLComponents,
   type TLShape,
@@ -19,6 +20,8 @@ import { ToastStack, type ToastMessage } from "@/components/ui/Toast";
 import { EmptyCanvas } from "@/components/ui/EmptyCanvas";
 import { TemplatesDialog } from "@/components/ui/TemplatesDialog";
 import { ShortcutsDialog } from "@/components/ui/ShortcutsDialog";
+import { PagesBar } from "@/components/ui/PagesBar";
+import { PresentMode } from "@/components/ui/PresentMode";
 import { downloadSaveFile } from "@/lib/io/saveJson";
 import { loadSaveFileFromFile } from "@/lib/io/loadJson";
 import { exportPng, exportSvg } from "@/lib/io/exportImage";
@@ -41,6 +44,8 @@ export function CanvasEditor() {
   const [shapeCount, setShapeCount] = useState(0);
   const [templatesOpen, setTemplatesOpen] = useState(false);
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
+  const [presentOpen, setPresentOpen] = useState(false);
+  const [presentSnapshot, setPresentSnapshot] = useState<unknown>(null);
   const nextToastId = useRef(1);
 
   const pushToast = useCallback((text: string, kind: ToastMessage["kind"] = "info") => {
@@ -147,6 +152,16 @@ export function CanvasEditor() {
 
   const onUndo = useCallback(() => editor?.undo(), [editor]);
   const onRedo = useCallback(() => editor?.redo(), [editor]);
+
+  const onPresent = useCallback(() => {
+    if (!editor) return;
+    if (editor.getCurrentPageShapeIds().size === 0 && editor.getPages().length === 1) {
+      pushToast("Add something to the canvas before presenting.", "error");
+      return;
+    }
+    setPresentSnapshot(getSnapshot(editor.store));
+    setPresentOpen(true);
+  }, [editor, pushToast]);
 
   const onPickTemplate = useCallback(
     (template: Template) => {
@@ -281,7 +296,8 @@ export function CanvasEditor() {
 
   const tldrawComponents = useMemo<TLComponents>(
     () => ({
-      // We provide our own File/Export/Undo/Redo + logo in the top bar.
+      // We provide our own File/Export/Undo/Redo + logo in the top bar and
+      // our own PagesBar at the bottom.
       MenuPanel: null,
       PageMenu: null,
       ActionsMenu: null,
@@ -298,7 +314,7 @@ export function CanvasEditor() {
         <Tldraw
           shapeUtils={shapeUtils}
           onMount={handleMount}
-          options={{ maxPages: 1 }}
+          options={{ maxPages: 20 }}
           components={tldrawComponents}
         />
       </div>
@@ -318,6 +334,7 @@ export function CanvasEditor() {
         onRedo={onRedo}
         onOpenTemplates={() => setTemplatesOpen(true)}
         onOpenShortcuts={() => setShortcutsOpen(true)}
+        onPresent={onPresent}
       />
 
       <ToolboxPanel
@@ -328,6 +345,8 @@ export function CanvasEditor() {
 
       <InspectorPanel editor={editor} selectedShape={selected} />
 
+      <PagesBar editor={editor} />
+
       <TemplatesDialog
         open={templatesOpen}
         onClose={() => setTemplatesOpen(false)}
@@ -337,6 +356,12 @@ export function CanvasEditor() {
       <ShortcutsDialog
         open={shortcutsOpen}
         onClose={() => setShortcutsOpen(false)}
+      />
+
+      <PresentMode
+        open={presentOpen}
+        onClose={() => setPresentOpen(false)}
+        snapshot={presentSnapshot}
       />
 
       <ToastStack toasts={toasts} onDismiss={dismissToast} />
