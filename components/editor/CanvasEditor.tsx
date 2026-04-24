@@ -23,6 +23,9 @@ import { ShortcutsDialog } from "@/components/ui/ShortcutsDialog";
 import { PagesBar } from "@/components/ui/PagesBar";
 import { PresentMode } from "@/components/ui/PresentMode";
 import { SpeakerNotesDialog } from "@/components/ui/SpeakerNotesDialog";
+import { ImportSObjectDialog } from "@/components/ui/ImportSObjectDialog";
+import { toFieldsText, type ImportedSObject } from "@/lib/sfImporter";
+import { CUSTOM_SHAPE_TYPES } from "@/types/shapes";
 import {
   buildBlockFromSelection,
   insertSavedBlock,
@@ -57,6 +60,7 @@ export function CanvasEditor() {
   );
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
   const [notesOpen, setNotesOpen] = useState(false);
+  const [sfImportOpen, setSfImportOpen] = useState(false);
   const [presentOpen, setPresentOpen] = useState(false);
   const [presentSnapshot, setPresentSnapshot] = useState<unknown>(null);
   const [savedBlocksVersion, setSavedBlocksVersion] = useState(0);
@@ -363,6 +367,33 @@ export function CanvasEditor() {
     pushToast(`Saved "${block.name}" to your blocks`, "success");
   }, [editor, pushToast]);
 
+  const onImportSObject = useCallback(
+    (obj: ImportedSObject) => {
+      if (!editor) return;
+      const viewport = editor.getViewportPageBounds();
+      const id = `shape:${Math.random().toString(36).slice(2, 10)}` as TLShapeId;
+      editor.markHistoryStoppingPoint("import-sobject");
+      editor.createShape({
+        id,
+        type: CUSTOM_SHAPE_TYPES.sobject,
+        x: viewport.center.x - 160,
+        y: viewport.center.y - 140,
+        props: {
+          w: 320,
+          h: 280,
+          label: obj.label,
+          apiName: obj.apiName,
+          sobjectType: obj.sobjectType,
+          fields: toFieldsText(obj),
+        },
+      });
+      editor.setCurrentTool("select");
+      editor.select(id);
+      pushToast(`Imported ${obj.apiName}`, "success");
+    },
+    [editor, pushToast],
+  );
+
   const onInsertSavedBlock = useCallback(
     (block: SavedBlock) => {
       if (!editor) return;
@@ -429,6 +460,7 @@ export function CanvasEditor() {
         onUploadImage={onUploadImage}
         onInsertSavedBlock={onInsertSavedBlock}
         savedBlocksVersion={savedBlocksVersion}
+        onImportSObject={() => setSfImportOpen(true)}
       />
 
       <InspectorPanel
@@ -465,6 +497,12 @@ export function CanvasEditor() {
         open={notesOpen}
         onClose={() => setNotesOpen(false)}
         editor={editor}
+      />
+
+      <ImportSObjectDialog
+        open={sfImportOpen}
+        onClose={() => setSfImportOpen(false)}
+        onInsert={onImportSObject}
       />
 
       <ToastStack toasts={toasts} onDismiss={dismissToast} />
