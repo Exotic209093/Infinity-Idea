@@ -15,6 +15,10 @@ import {
   CUSTOM_SHAPE_TYPES,
   SF_FIELD_FAMILIES,
   SF_FIELD_TYPES,
+  FLOW_ELEMENT_TYPES,
+  FLOW_ELEMENT_COLOURS,
+  FLOW_ELEMENT_LABEL,
+  type FlowElementType,
   type SFFieldType,
 } from "@/types/shapes";
 
@@ -1299,6 +1303,835 @@ function FlagBadge({ children }: { children: React.ReactNode }) {
   );
 }
 
+/* ---------- Apex Class ---------- */
+
+export type ApexClassShape = TLBaseShape<
+  "apexClass",
+  {
+    w: number;
+    h: number;
+    label: string;
+    apiName: string;
+    classKind: "class" | "trigger" | "interface" | "enum" | "test";
+    visibility: "public" | "global" | "private";
+    sharing: "with" | "without" | "inherited" | "none";
+    // Each line: name(args): Return | modifier(s)
+    // modifiers comma-separated: public, global, private, static, override, virtual, abstract
+    members: string;
+  }
+>;
+
+export type ParsedApexMember = {
+  signature: string;
+  modifiers: string[];
+};
+
+export function parseApexMembers(raw: string): ParsedApexMember[] {
+  return raw
+    .split("\n")
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .map((line) => {
+      const [sigRaw = "", modsRaw = ""] = line.split("|").map((p) => p.trim());
+      return {
+        signature: sigRaw,
+        modifiers: modsRaw
+          .split(",")
+          .map((m) => m.trim().toLowerCase())
+          .filter(Boolean),
+      };
+    });
+}
+
+export class ApexClassShapeUtil extends BaseBoxShapeUtil<ApexClassShape> {
+  static override type = CUSTOM_SHAPE_TYPES.apexClass;
+  static override props: RecordProps<ApexClassShape> = {
+    ...baseProps,
+    apiName: T.string,
+    classKind: T.literalEnum("class", "trigger", "interface", "enum", "test"),
+    visibility: T.literalEnum("public", "global", "private"),
+    sharing: T.literalEnum("with", "without", "inherited", "none"),
+    members: T.string,
+  };
+  override getDefaultProps(): ApexClassShape["props"] {
+    const defaults = [
+      "createAccount(Account a): Id | public, static",
+      "upsertContacts(List<Contact> cs): void | public",
+      "sendWelcome(Id contactId): Boolean | private",
+    ].join("\n");
+    return {
+      w: 320,
+      h: 220,
+      label: "AccountService",
+      apiName: "AccountService",
+      classKind: "class",
+      visibility: "public",
+      sharing: "with",
+      members: defaults,
+    };
+  }
+  override getGeometry(shape: ApexClassShape) {
+    return baseGeometry(shape);
+  }
+  override onResize(shape: ApexClassShape, info: TLResizeInfo<ApexClassShape>) {
+    return onResize(shape, info);
+  }
+  override component(shape: ApexClassShape) {
+    const members = parseApexMembers(shape.props.members);
+    const accent =
+      shape.props.classKind === "trigger"
+        ? "#f59e0b"
+        : shape.props.classKind === "interface"
+        ? "#22d3ee"
+        : shape.props.classKind === "enum"
+        ? "#a78bfa"
+        : shape.props.classKind === "test"
+        ? "#34d399"
+        : "#8b5cf6";
+    const sharingBadge =
+      shape.props.sharing === "none" ? "" : `${shape.props.sharing} sharing`;
+    return (
+      <HTMLContainer
+        style={{
+          width: shape.props.w,
+          height: shape.props.h,
+          borderRadius: 14,
+          background: "rgba(20,20,32,0.8)",
+          border: `1px solid ${withAlpha(accent, 0.45)}`,
+          overflow: "hidden",
+          color: "#fff",
+          display: "flex",
+          flexDirection: "column",
+          boxShadow: `0 4px 22px ${withAlpha(accent, 0.18)}`,
+        }}
+      >
+        <div
+          style={{
+            padding: "10px 14px",
+            background: `linear-gradient(135deg, ${withAlpha(accent, 0.55)}, ${withAlpha(accent, 0.22)})`,
+            borderBottom: "1px solid rgba(255,255,255,0.08)",
+          }}
+        >
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 8,
+              fontSize: 11,
+              textTransform: "uppercase",
+              letterSpacing: 0.8,
+              color: "rgba(255,255,255,0.75)",
+              fontWeight: 700,
+            }}
+          >
+            <span>{shape.props.classKind}</span>
+            <span style={{ color: "rgba(255,255,255,0.35)" }}>·</span>
+            <span>{shape.props.visibility}</span>
+            {sharingBadge && (
+              <>
+                <span style={{ color: "rgba(255,255,255,0.35)" }}>·</span>
+                <span>{sharingBadge}</span>
+              </>
+            )}
+          </div>
+          <div
+            style={{
+              marginTop: 2,
+              fontSize: 16,
+              fontWeight: 800,
+              fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace",
+            }}
+          >
+            {shape.props.label || "Unnamed"}
+          </div>
+        </div>
+        <div
+          style={{
+            flex: 1,
+            overflow: "auto",
+            padding: "6px 10px 10px",
+            fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace",
+            fontSize: 11.5,
+          }}
+        >
+          {members.length === 0 && (
+            <div style={{ padding: 10, color: "rgba(255,255,255,0.4)" }}>
+              No members
+            </div>
+          )}
+          {members.map((m, i) => (
+            <div
+              key={i}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 6,
+                padding: "4px 4px",
+                borderBottom:
+                  i === members.length - 1
+                    ? "none"
+                    : "1px solid rgba(255,255,255,0.05)",
+              }}
+            >
+              <span
+                style={{
+                  color: "rgba(255,255,255,0.9)",
+                  flex: 1,
+                  whiteSpace: "nowrap",
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                }}
+              >
+                {m.signature}
+              </span>
+              <span style={{ display: "flex", gap: 3 }}>
+                {m.modifiers.map((mod) => (
+                  <span
+                    key={mod}
+                    style={{
+                      fontSize: 9,
+                      padding: "1px 5px",
+                      borderRadius: 4,
+                      background: withAlpha(accent, 0.2),
+                      color: accent,
+                      fontWeight: 700,
+                      textTransform: "uppercase",
+                      letterSpacing: 0.3,
+                    }}
+                  >
+                    {mod}
+                  </span>
+                ))}
+              </span>
+            </div>
+          ))}
+        </div>
+      </HTMLContainer>
+    );
+  }
+  override indicator(shape: ApexClassShape) {
+    return <rect width={shape.props.w} height={shape.props.h} rx={14} />;
+  }
+}
+
+/* ---------- Flow Element ---------- */
+
+export type FlowElementShape = TLBaseShape<
+  "flowElement",
+  {
+    w: number;
+    h: number;
+    label: string;
+    elementType: FlowElementType;
+    details: string;
+  }
+>;
+
+export class FlowElementShapeUtil extends BaseBoxShapeUtil<FlowElementShape> {
+  static override type = CUSTOM_SHAPE_TYPES.flowElement;
+  static override props: RecordProps<FlowElementShape> = {
+    ...baseProps,
+    elementType: T.literalEnum(...(FLOW_ELEMENT_TYPES as unknown as [FlowElementType])),
+    details: T.string,
+  };
+  override getDefaultProps(): FlowElementShape["props"] {
+    return {
+      w: 220,
+      h: 100,
+      label: "Qualify lead",
+      elementType: "decision",
+      details: "If lead score > 75, route to sales.",
+    };
+  }
+  override getGeometry(shape: FlowElementShape) {
+    return baseGeometry(shape);
+  }
+  override onResize(shape: FlowElementShape, info: TLResizeInfo<FlowElementShape>) {
+    return onResize(shape, info);
+  }
+  override component(shape: FlowElementShape) {
+    const accent = FLOW_ELEMENT_COLOURS[shape.props.elementType];
+    const typeLabel = FLOW_ELEMENT_LABEL[shape.props.elementType];
+    const glyph = flowGlyph(shape.props.elementType);
+    return (
+      <HTMLContainer
+        style={{
+          width: shape.props.w,
+          height: shape.props.h,
+          borderRadius: 14,
+          background: `linear-gradient(180deg, ${withAlpha(accent, 0.25)} 0%, rgba(20,20,32,0.85) 80%)`,
+          border: `1px solid ${withAlpha(accent, 0.5)}`,
+          overflow: "hidden",
+          color: "#fff",
+          display: "flex",
+          padding: 12,
+          gap: 10,
+          boxShadow: `0 4px 22px ${withAlpha(accent, 0.18)}`,
+        }}
+      >
+        <div
+          style={{
+            width: 36,
+            height: 36,
+            borderRadius: 10,
+            background: `linear-gradient(135deg, ${accent}, ${withAlpha(accent, 0.65)})`,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            fontWeight: 800,
+            fontSize: 15,
+            color: "#0b0b16",
+            flexShrink: 0,
+          }}
+        >
+          {glyph}
+        </div>
+        <div style={{ minWidth: 0, flex: 1 }}>
+          <div
+            style={{
+              fontSize: 10,
+              textTransform: "uppercase",
+              letterSpacing: 0.6,
+              color: accent,
+              fontWeight: 800,
+            }}
+          >
+            {typeLabel}
+          </div>
+          <div
+            style={{
+              fontSize: 14,
+              fontWeight: 700,
+              marginTop: 2,
+              whiteSpace: "nowrap",
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+            }}
+          >
+            {shape.props.label || "Unnamed"}
+          </div>
+          {shape.props.details && (
+            <div
+              style={{
+                marginTop: 4,
+                fontSize: 11.5,
+                color: "rgba(255,255,255,0.65)",
+                overflow: "hidden",
+                display: "-webkit-box",
+                WebkitLineClamp: 2,
+                WebkitBoxOrient: "vertical",
+              }}
+            >
+              {shape.props.details}
+            </div>
+          )}
+        </div>
+      </HTMLContainer>
+    );
+  }
+  override indicator(shape: FlowElementShape) {
+    return <rect width={shape.props.w} height={shape.props.h} rx={14} />;
+  }
+}
+
+function flowGlyph(type: FlowElementType): string {
+  switch (type) {
+    case "start": return "▶";
+    case "end": return "■";
+    case "screen": return "⌘";
+    case "decision": return "◆";
+    case "assignment": return "=";
+    case "createRecord": return "+";
+    case "updateRecord": return "✎";
+    case "deleteRecord": return "×";
+    case "getRecords": return "⎙";
+    case "action": return "⚡";
+    case "loop": return "↻";
+    case "subflow": return "↘";
+    default: return "·";
+  }
+}
+
+/* ---------- Permission Matrix ---------- */
+
+export type PermissionMatrixShape = TLBaseShape<
+  "permissionMatrix",
+  {
+    w: number;
+    h: number;
+    label: string;
+    profile: string;
+    // Each line: Object | C | R | U | D | X (Modify All, optional)
+    // values: 1/0 (or yes/no) per column
+    rows: string;
+  }
+>;
+
+export type ParsedPermRow = {
+  object: string;
+  create: boolean;
+  read: boolean;
+  update: boolean;
+  del: boolean;
+  modifyAll: boolean;
+};
+
+function truthy(v: string): boolean {
+  const s = v.trim().toLowerCase();
+  return s === "1" || s === "y" || s === "yes" || s === "✓" || s === "true";
+}
+
+export function parsePermRows(raw: string): ParsedPermRow[] {
+  return raw
+    .split("\n")
+    .map((l) => l.trim())
+    .filter(Boolean)
+    .map((line) => {
+      const cells = line.split("|").map((c) => c.trim());
+      const [obj = "", c = "0", r = "0", u = "0", d = "0", x = "0"] = cells;
+      return {
+        object: obj,
+        create: truthy(c),
+        read: truthy(r),
+        update: truthy(u),
+        del: truthy(d),
+        modifyAll: truthy(x),
+      };
+    });
+}
+
+export class PermissionMatrixShapeUtil extends BaseBoxShapeUtil<PermissionMatrixShape> {
+  static override type = CUSTOM_SHAPE_TYPES.permissionMatrix;
+  static override props: RecordProps<PermissionMatrixShape> = {
+    ...baseProps,
+    profile: T.string,
+    rows: T.string,
+  };
+  override getDefaultProps(): PermissionMatrixShape["props"] {
+    return {
+      w: 360,
+      h: 220,
+      label: "Object permissions",
+      profile: "Sales User",
+      rows: [
+        "Account | 1 | 1 | 1 | 0 | 0",
+        "Contact | 1 | 1 | 1 | 1 | 0",
+        "Opportunity | 1 | 1 | 1 | 0 | 0",
+        "Lead | 1 | 1 | 1 | 0 | 0",
+      ].join("\n"),
+    };
+  }
+  override getGeometry(shape: PermissionMatrixShape) {
+    return baseGeometry(shape);
+  }
+  override onResize(shape: PermissionMatrixShape, info: TLResizeInfo<PermissionMatrixShape>) {
+    return onResize(shape, info);
+  }
+  override component(shape: PermissionMatrixShape) {
+    const rows = parsePermRows(shape.props.rows);
+    return (
+      <HTMLContainer
+        style={{
+          width: shape.props.w,
+          height: shape.props.h,
+          borderRadius: 14,
+          background: "rgba(20,20,32,0.8)",
+          border: "1px solid rgba(34,211,238,0.35)",
+          overflow: "hidden",
+          color: "#fff",
+          display: "flex",
+          flexDirection: "column",
+        }}
+      >
+        <div
+          style={{
+            padding: "10px 14px",
+            background:
+              "linear-gradient(135deg, rgba(34,211,238,0.35), rgba(108,99,255,0.25))",
+            borderBottom: "1px solid rgba(255,255,255,0.08)",
+          }}
+        >
+          <div
+            style={{
+              fontSize: 10,
+              textTransform: "uppercase",
+              letterSpacing: 0.6,
+              color: "rgba(255,255,255,0.6)",
+              fontWeight: 700,
+            }}
+          >
+            {shape.props.label || "Permissions"}
+          </div>
+          <div style={{ marginTop: 2, fontSize: 14, fontWeight: 800 }}>
+            {shape.props.profile || "—"}
+          </div>
+        </div>
+        <div style={{ flex: 1, overflow: "auto" }}>
+          <table
+            style={{
+              width: "100%",
+              borderCollapse: "collapse",
+              fontSize: 12,
+              tableLayout: "fixed",
+            }}
+          >
+            <thead>
+              <tr
+                style={{
+                  fontSize: 10,
+                  textTransform: "uppercase",
+                  letterSpacing: 0.6,
+                  color: "rgba(255,255,255,0.55)",
+                  background: "rgba(255,255,255,0.03)",
+                }}
+              >
+                <th style={{ textAlign: "left", padding: "6px 10px", fontWeight: 700 }}>
+                  Object
+                </th>
+                {(["C", "R", "U", "D", "X"] as const).map((c) => (
+                  <th key={c} style={{ padding: "6px 4px", fontWeight: 700, width: 32 }}>
+                    {c}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((r, i) => (
+                <tr
+                  key={i}
+                  style={{
+                    borderTop: "1px solid rgba(255,255,255,0.06)",
+                  }}
+                >
+                  <td
+                    style={{
+                      padding: "6px 10px",
+                      color: "rgba(255,255,255,0.9)",
+                      whiteSpace: "nowrap",
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                    }}
+                  >
+                    {r.object}
+                  </td>
+                  {[r.create, r.read, r.update, r.del, r.modifyAll].map((on, j) => (
+                    <td key={j} style={{ padding: "4px", textAlign: "center" }}>
+                      <span
+                        style={{
+                          display: "inline-flex",
+                          width: 18,
+                          height: 18,
+                          borderRadius: 5,
+                          background: on ? "rgba(52,211,153,0.25)" : "rgba(255,255,255,0.04)",
+                          border: on
+                            ? "1px solid rgba(52,211,153,0.55)"
+                            : "1px solid rgba(255,255,255,0.08)",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          color: on ? "#34d399" : "rgba(255,255,255,0.25)",
+                          fontSize: 11,
+                          fontWeight: 800,
+                        }}
+                      >
+                        {on ? "✓" : "·"}
+                      </span>
+                    </td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </HTMLContainer>
+    );
+  }
+  override indicator(shape: PermissionMatrixShape) {
+    return <rect width={shape.props.w} height={shape.props.h} rx={14} />;
+  }
+}
+
+/* ---------- Connected App ---------- */
+
+export type ConnectedAppShape = TLBaseShape<
+  "connectedApp",
+  {
+    w: number;
+    h: number;
+    label: string;
+    description: string;
+    authType: "oauth2" | "jwt" | "saml" | "apiKey" | "basic";
+    endpoint: string;
+    scopes: string;
+  }
+>;
+
+export class ConnectedAppShapeUtil extends BaseBoxShapeUtil<ConnectedAppShape> {
+  static override type = CUSTOM_SHAPE_TYPES.connectedApp;
+  static override props: RecordProps<ConnectedAppShape> = {
+    ...baseProps,
+    description: T.string,
+    authType: T.literalEnum("oauth2", "jwt", "saml", "apiKey", "basic"),
+    endpoint: T.string,
+    scopes: T.string,
+  };
+  override getDefaultProps(): ConnectedAppShape["props"] {
+    return {
+      w: 320,
+      h: 200,
+      label: "Xero Sync",
+      description: "Two-way sync between Salesforce and Xero accounting.",
+      authType: "oauth2",
+      endpoint: "https://api.xero.com",
+      scopes: "accounting.transactions,accounting.contacts",
+    };
+  }
+  override getGeometry(shape: ConnectedAppShape) {
+    return baseGeometry(shape);
+  }
+  override onResize(shape: ConnectedAppShape, info: TLResizeInfo<ConnectedAppShape>) {
+    return onResize(shape, info);
+  }
+  override component(shape: ConnectedAppShape) {
+    const accent = "#22d3ee";
+    const authLabel: Record<ConnectedAppShape["props"]["authType"], string> = {
+      oauth2: "OAuth 2.0",
+      jwt: "JWT Bearer",
+      saml: "SAML",
+      apiKey: "API Key",
+      basic: "Basic Auth",
+    };
+    const scopeList = shape.props.scopes
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean);
+    return (
+      <HTMLContainer
+        style={{
+          width: shape.props.w,
+          height: shape.props.h,
+          borderRadius: 14,
+          background: "rgba(20,20,32,0.8)",
+          border: `1px solid ${withAlpha(accent, 0.45)}`,
+          overflow: "hidden",
+          color: "#fff",
+          display: "flex",
+          flexDirection: "column",
+          boxShadow: `0 4px 22px ${withAlpha(accent, 0.18)}`,
+        }}
+      >
+        <div
+          style={{
+            padding: "10px 14px",
+            background: `linear-gradient(135deg, ${withAlpha(accent, 0.45)}, ${withAlpha(accent, 0.15)})`,
+            borderBottom: "1px solid rgba(255,255,255,0.08)",
+            display: "flex",
+            alignItems: "center",
+            gap: 10,
+          }}
+        >
+          <div
+            style={{
+              width: 32,
+              height: 32,
+              borderRadius: 8,
+              background: `linear-gradient(135deg, ${accent}, #8b5cf6)`,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              fontWeight: 800,
+              fontSize: 16,
+              color: "#0b0b16",
+              flexShrink: 0,
+            }}
+          >
+            ⇄
+          </div>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontSize: 14, fontWeight: 800, lineHeight: 1.1 }}>
+              {shape.props.label || "Connected app"}
+            </div>
+            <div
+              style={{
+                marginTop: 2,
+                fontSize: 11,
+                color: "rgba(255,255,255,0.65)",
+                fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace",
+                whiteSpace: "nowrap",
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+              }}
+            >
+              {shape.props.endpoint || "no endpoint"}
+            </div>
+          </div>
+          <span
+            style={{
+              fontSize: 10,
+              padding: "3px 8px",
+              borderRadius: 999,
+              background: withAlpha(accent, 0.2),
+              color: accent,
+              fontWeight: 700,
+              textTransform: "uppercase",
+              letterSpacing: 0.5,
+              whiteSpace: "nowrap",
+              flexShrink: 0,
+            }}
+          >
+            {authLabel[shape.props.authType]}
+          </span>
+        </div>
+        <div style={{ padding: "10px 14px", fontSize: 12.5, color: "rgba(255,255,255,0.8)" }}>
+          {shape.props.description}
+        </div>
+        {scopeList.length > 0 && (
+          <div
+            style={{
+              padding: "0 14px 12px",
+              display: "flex",
+              flexWrap: "wrap",
+              gap: 4,
+            }}
+          >
+            {scopeList.map((s) => (
+              <span
+                key={s}
+                style={{
+                  fontSize: 10,
+                  padding: "2px 7px",
+                  borderRadius: 999,
+                  background: "rgba(255,255,255,0.06)",
+                  color: "rgba(255,255,255,0.75)",
+                  fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace",
+                }}
+              >
+                {s}
+              </span>
+            ))}
+          </div>
+        )}
+      </HTMLContainer>
+    );
+  }
+  override indicator(shape: ConnectedAppShape) {
+    return <rect width={shape.props.w} height={shape.props.h} rx={14} />;
+  }
+}
+
+/* ---------- Relationship Label ---------- */
+
+export type RelationshipLabelShape = TLBaseShape<
+  "relationshipLabel",
+  {
+    w: number;
+    h: number;
+    label: string;
+    cardinality: "1:1" | "1:N" | "N:1" | "N:N";
+    kind: "lookup" | "masterDetail" | "hierarchy" | "junction";
+  }
+>;
+
+export class RelationshipLabelShapeUtil extends BaseBoxShapeUtil<RelationshipLabelShape> {
+  static override type = CUSTOM_SHAPE_TYPES.relationshipLabel;
+  static override props: RecordProps<RelationshipLabelShape> = {
+    ...baseProps,
+    cardinality: T.literalEnum("1:1", "1:N", "N:1", "N:N"),
+    kind: T.literalEnum("lookup", "masterDetail", "hierarchy", "junction"),
+  };
+  override getDefaultProps(): RelationshipLabelShape["props"] {
+    return {
+      w: 160,
+      h: 52,
+      label: "Account → Contact",
+      cardinality: "1:N",
+      kind: "lookup",
+    };
+  }
+  override getGeometry(shape: RelationshipLabelShape) {
+    return baseGeometry(shape);
+  }
+  override onResize(shape: RelationshipLabelShape, info: TLResizeInfo<RelationshipLabelShape>) {
+    return onResize(shape, info);
+  }
+  override component(shape: RelationshipLabelShape) {
+    const kindColour =
+      shape.props.kind === "masterDetail"
+        ? "#ec4899"
+        : shape.props.kind === "hierarchy"
+        ? "#f59e0b"
+        : shape.props.kind === "junction"
+        ? "#22d3ee"
+        : "#8b5cf6";
+    const kindLabel =
+      shape.props.kind === "masterDetail"
+        ? "Master-Detail"
+        : shape.props.kind === "hierarchy"
+        ? "Hierarchy"
+        : shape.props.kind === "junction"
+        ? "Junction"
+        : "Lookup";
+    return (
+      <HTMLContainer
+        style={{
+          width: shape.props.w,
+          height: shape.props.h,
+          borderRadius: 999,
+          background: "rgba(15,15,26,0.9)",
+          border: `1px solid ${withAlpha(kindColour, 0.55)}`,
+          overflow: "hidden",
+          color: "#fff",
+          display: "flex",
+          alignItems: "center",
+          gap: 8,
+          padding: "6px 12px",
+          boxShadow: `0 4px 18px ${withAlpha(kindColour, 0.25)}`,
+        }}
+      >
+        <span
+          style={{
+            fontSize: 11,
+            padding: "2px 8px",
+            borderRadius: 999,
+            background: kindColour,
+            color: "#0b0b16",
+            fontWeight: 800,
+            flexShrink: 0,
+          }}
+        >
+          {shape.props.cardinality}
+        </span>
+        <div style={{ minWidth: 0, flex: 1 }}>
+          <div
+            style={{
+              fontSize: 12,
+              fontWeight: 700,
+              whiteSpace: "nowrap",
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+            }}
+          >
+            {shape.props.label || "Relationship"}
+          </div>
+          <div
+            style={{
+              fontSize: 9.5,
+              color: withAlpha(kindColour, 0.9),
+              textTransform: "uppercase",
+              letterSpacing: 0.4,
+              fontWeight: 700,
+            }}
+          >
+            {kindLabel}
+          </div>
+        </div>
+      </HTMLContainer>
+    );
+  }
+  override indicator(shape: RelationshipLabelShape) {
+    return <rect width={shape.props.w} height={shape.props.h} rx={999} />;
+  }
+}
+
 export const customShapeUtils = [
   ProcessStepShapeUtil,
   DecisionGateShapeUtil,
@@ -1312,4 +2145,9 @@ export const customShapeUtils = [
   QuoteShapeUtil,
   KpiStatShapeUtil,
   SObjectShapeUtil,
+  ApexClassShapeUtil,
+  FlowElementShapeUtil,
+  PermissionMatrixShapeUtil,
+  ConnectedAppShapeUtil,
+  RelationshipLabelShapeUtil,
 ];

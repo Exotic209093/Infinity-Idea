@@ -31,6 +31,11 @@ export function InspectorPanel({
     if (t === CUSTOM_SHAPE_TYPES.quote) return "Quote";
     if (t === CUSTOM_SHAPE_TYPES.kpiStat) return "KPI Stat";
     if (t === CUSTOM_SHAPE_TYPES.sobject) return "Salesforce Object";
+    if (t === CUSTOM_SHAPE_TYPES.apexClass) return "Apex Class";
+    if (t === CUSTOM_SHAPE_TYPES.flowElement) return "Flow Element";
+    if (t === CUSTOM_SHAPE_TYPES.permissionMatrix) return "Permission Matrix";
+    if (t === CUSTOM_SHAPE_TYPES.connectedApp) return "Connected App";
+    if (t === CUSTOM_SHAPE_TYPES.relationshipLabel) return "Relationship";
     return t.charAt(0).toUpperCase() + t.slice(1);
   }, [selectedShape]);
 
@@ -268,8 +273,7 @@ function ShapeFields({
             placeholder="Name | type | flags | refTo"
             multiline
           />
-          <div className="rounded-md border border-white/10 bg-white/[0.03] p-2 text-[11px] leading-snug text-white/55">
-            <div className="mb-1 font-semibold text-white/75">Format</div>
+          <HelpCard title="Format">
             <code className="text-[10px] text-white/70">Name | type | flags | refTo</code>
             <div className="mt-2 text-white/55">
               Types: id, text, textarea, email, phone, url, number, currency,
@@ -281,9 +285,193 @@ function ShapeFields({
               <code className="text-white/70">unq</code>,{" "}
               <code className="text-white/70">ext</code>,{" "}
               <code className="text-white/70">pk</code>. refTo names another
-              SObject (lookup / master-detail).
+              SObject.
             </div>
-          </div>
+          </HelpCard>
+        </>
+      )}
+
+      {shape.type === CUSTOM_SHAPE_TYPES.apexClass && (
+        <>
+          <TextField
+            label="API name"
+            value={String(props.apiName ?? "")}
+            onChange={(v) => update({ apiName: v })}
+          />
+          <SelectField
+            label="Kind"
+            value={String(props.classKind ?? "class")}
+            options={[
+              { label: "Class", value: "class" },
+              { label: "Trigger", value: "trigger" },
+              { label: "Interface", value: "interface" },
+              { label: "Enum", value: "enum" },
+              { label: "Test class", value: "test" },
+            ]}
+            onChange={(v) => update({ classKind: v })}
+          />
+          <SelectField
+            label="Visibility"
+            value={String(props.visibility ?? "public")}
+            options={[
+              { label: "Public", value: "public" },
+              { label: "Global", value: "global" },
+              { label: "Private", value: "private" },
+            ]}
+            onChange={(v) => update({ visibility: v })}
+          />
+          <SelectField
+            label="Sharing"
+            value={String(props.sharing ?? "with")}
+            options={[
+              { label: "With sharing", value: "with" },
+              { label: "Without sharing", value: "without" },
+              { label: "Inherited", value: "inherited" },
+              { label: "Not specified", value: "none" },
+            ]}
+            onChange={(v) => update({ sharing: v })}
+          />
+          <TextField
+            label="Members (one per line)"
+            value={String(props.members ?? "")}
+            onChange={(v) => update({ members: v })}
+            placeholder="name(args): Return | modifiers"
+            multiline
+          />
+          <HelpCard title="Format">
+            <code className="text-[10px] text-white/70">
+              methodName(args): Return | modifiers
+            </code>
+            <div className="mt-2 text-white/55">
+              Modifiers comma-separated:{" "}
+              <code className="text-white/70">public</code>,{" "}
+              <code className="text-white/70">global</code>,{" "}
+              <code className="text-white/70">private</code>,{" "}
+              <code className="text-white/70">static</code>,{" "}
+              <code className="text-white/70">virtual</code>,{" "}
+              <code className="text-white/70">override</code>,{" "}
+              <code className="text-white/70">abstract</code>.
+            </div>
+          </HelpCard>
+        </>
+      )}
+
+      {shape.type === CUSTOM_SHAPE_TYPES.flowElement && (
+        <>
+          <SelectField
+            label="Element type"
+            value={String(props.elementType ?? "decision")}
+            options={[
+              { label: "Start", value: "start" },
+              { label: "End", value: "end" },
+              { label: "Screen", value: "screen" },
+              { label: "Decision", value: "decision" },
+              { label: "Assignment", value: "assignment" },
+              { label: "Create Record", value: "createRecord" },
+              { label: "Update Record", value: "updateRecord" },
+              { label: "Delete Record", value: "deleteRecord" },
+              { label: "Get Records", value: "getRecords" },
+              { label: "Action", value: "action" },
+              { label: "Loop", value: "loop" },
+              { label: "Subflow", value: "subflow" },
+            ]}
+            onChange={(v) => update({ elementType: v })}
+          />
+          <TextField
+            label="Details"
+            value={String(props.details ?? "")}
+            onChange={(v) => update({ details: v })}
+            multiline
+          />
+        </>
+      )}
+
+      {shape.type === CUSTOM_SHAPE_TYPES.permissionMatrix && (
+        <>
+          <TextField
+            label="Profile / Permission set"
+            value={String(props.profile ?? "")}
+            onChange={(v) => update({ profile: v })}
+          />
+          <TextField
+            label="Rows (one per line)"
+            value={String(props.rows ?? "")}
+            onChange={(v) => update({ rows: v })}
+            placeholder="Object | C | R | U | D | X"
+            multiline
+          />
+          <HelpCard title="Format">
+            <code className="text-[10px] text-white/70">
+              Object | C | R | U | D | X
+            </code>
+            <div className="mt-2 text-white/55">
+              Use <code className="text-white/70">1</code> /{" "}
+              <code className="text-white/70">0</code> (or yes/no) per column.
+              Columns are Create, Read, Update, Delete, Modify All.
+            </div>
+          </HelpCard>
+        </>
+      )}
+
+      {shape.type === CUSTOM_SHAPE_TYPES.connectedApp && (
+        <>
+          <TextField
+            label="Description"
+            value={String(props.description ?? "")}
+            onChange={(v) => update({ description: v })}
+            multiline
+          />
+          <SelectField
+            label="Auth type"
+            value={String(props.authType ?? "oauth2")}
+            options={[
+              { label: "OAuth 2.0", value: "oauth2" },
+              { label: "JWT Bearer", value: "jwt" },
+              { label: "SAML", value: "saml" },
+              { label: "API Key", value: "apiKey" },
+              { label: "Basic Auth", value: "basic" },
+            ]}
+            onChange={(v) => update({ authType: v })}
+          />
+          <TextField
+            label="Endpoint"
+            value={String(props.endpoint ?? "")}
+            onChange={(v) => update({ endpoint: v })}
+            placeholder="https://…"
+          />
+          <TextField
+            label="Scopes (comma separated)"
+            value={String(props.scopes ?? "")}
+            onChange={(v) => update({ scopes: v })}
+            placeholder="accounting.transactions, accounting.contacts"
+          />
+        </>
+      )}
+
+      {shape.type === CUSTOM_SHAPE_TYPES.relationshipLabel && (
+        <>
+          <SelectField
+            label="Cardinality"
+            value={String(props.cardinality ?? "1:N")}
+            options={[
+              { label: "1 : 1", value: "1:1" },
+              { label: "1 : N", value: "1:N" },
+              { label: "N : 1", value: "N:1" },
+              { label: "N : N", value: "N:N" },
+            ]}
+            onChange={(v) => update({ cardinality: v })}
+          />
+          <SelectField
+            label="Kind"
+            value={String(props.kind ?? "lookup")}
+            options={[
+              { label: "Lookup", value: "lookup" },
+              { label: "Master-Detail", value: "masterDetail" },
+              { label: "Hierarchy", value: "hierarchy" },
+              { label: "Junction", value: "junction" },
+            ]}
+            onChange={(v) => update({ kind: v })}
+          />
         </>
       )}
 
@@ -356,6 +544,21 @@ function NumberField({
         className="rounded-md border border-white/10 bg-white/5 px-2 py-1.5 text-sm text-white outline-none focus:border-brand-400"
       />
     </label>
+  );
+}
+
+function HelpCard({
+  title,
+  children,
+}: {
+  title: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="rounded-md border border-white/10 bg-white/[0.03] p-2 text-[11px] leading-snug text-white/55">
+      <div className="mb-1 font-semibold text-white/75">{title}</div>
+      {children}
+    </div>
   );
 }
 

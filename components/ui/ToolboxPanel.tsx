@@ -29,10 +29,16 @@ import {
   Bookmark,
   X as XIcon,
   Database,
+  Code2,
+  Workflow as WorkflowIcon,
+  ShieldCheck,
+  Plug,
+  Link2,
+  Cloud,
 } from "lucide-react";
 import { CUSTOM_SHAPE_TYPES } from "@/types/shapes";
 
-type Tab = "shapes" | "diagrams" | "blocks" | "saved";
+type Tab = "shapes" | "diagrams" | "blocks" | "salesforce" | "saved";
 
 type Props = {
   onSelectTool: (toolId: string) => void;
@@ -76,7 +82,20 @@ const blockItems: Array<{
   { type: CUSTOM_SHAPE_TYPES.kpiStat, label: "KPI Stat", hint: "Metric with trend", icon: <TrendingUp size={16} /> },
   { type: CUSTOM_SHAPE_TYPES.table, label: "Table", hint: "Editable grid", icon: <TableIcon size={16} /> },
   { type: CUSTOM_SHAPE_TYPES.quote, label: "Quote", hint: "Pull quote + attribution", icon: <QuoteIcon size={16} /> },
-  { type: CUSTOM_SHAPE_TYPES.sobject, label: "Salesforce object", hint: "SObject + fields", icon: <Database size={16} /> },
+];
+
+const salesforceItems: Array<{
+  type: string;
+  label: string;
+  hint: string;
+  icon: React.ReactNode;
+}> = [
+  { type: CUSTOM_SHAPE_TYPES.sobject, label: "SObject", hint: "Object + fields", icon: <Database size={16} /> },
+  { type: CUSTOM_SHAPE_TYPES.apexClass, label: "Apex Class", hint: "Class, trigger, interface", icon: <Code2 size={16} /> },
+  { type: CUSTOM_SHAPE_TYPES.flowElement, label: "Flow Element", hint: "Start, decision, action…", icon: <WorkflowIcon size={16} /> },
+  { type: CUSTOM_SHAPE_TYPES.permissionMatrix, label: "Permissions", hint: "CRUD matrix per profile", icon: <ShieldCheck size={16} /> },
+  { type: CUSTOM_SHAPE_TYPES.connectedApp, label: "Connected App", hint: "Integration / OAuth app", icon: <Plug size={16} /> },
+  { type: CUSTOM_SHAPE_TYPES.relationshipLabel, label: "Relationship", hint: "Cardinality arrow chip", icon: <Link2 size={16} /> },
 ];
 
 export function ToolboxPanel({
@@ -102,7 +121,7 @@ export function ToolboxPanel({
   return (
     <div className="glass-strong animate-slide-in-left pointer-events-auto absolute left-3 top-20 z-10 hidden w-64 flex-col overflow-hidden rounded-2xl shadow-glass md:flex"
          style={{ maxHeight: "calc(100vh - 110px)", animationDelay: "120ms" }}>
-      <div className="flex border-b border-white/10 p-1">
+      <div className="scroll-thin flex overflow-x-auto border-b border-white/10 p-1">
         <TabButton active={tab === "shapes"} onClick={() => setTab("shapes")}>
           Shapes
         </TabButton>
@@ -111,6 +130,14 @@ export function ToolboxPanel({
         </TabButton>
         <TabButton active={tab === "blocks"} onClick={() => setTab("blocks")}>
           Blocks
+        </TabButton>
+        <TabButton
+          active={tab === "salesforce"}
+          onClick={() => setTab("salesforce")}
+        >
+          <span className="flex items-center justify-center gap-1">
+            <Cloud size={10} /> SF
+          </span>
         </TabButton>
         <TabButton active={tab === "saved"} onClick={() => setTab("saved")}>
           Saved
@@ -190,6 +217,39 @@ export function ToolboxPanel({
                 </div>
               ))
             )}
+          </div>
+        )}
+
+        {tab === "salesforce" && (
+          <div className="flex flex-col gap-1.5">
+            <div className="mb-1 flex items-center gap-2 rounded-md border border-cyan-400/20 bg-cyan-400/5 px-3 py-2 text-[11px] text-cyan-200/85">
+              <Cloud size={14} className="flex-shrink-0" />
+              <span>
+                Salesforce-native blocks. Inspector has a format guide for
+                each.
+              </span>
+            </div>
+            {salesforceItems.map((b) => (
+              <button
+                key={b.type}
+                onClick={() => onInsertCustom(b.type)}
+                className="toolbox-block group flex items-center gap-3 rounded-lg border border-white/5 bg-white/5 p-3 text-left hover:border-white/20 hover:bg-white/10"
+              >
+                <div
+                  className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-md"
+                  style={{
+                    background:
+                      "linear-gradient(135deg, rgba(34,211,238,0.4), rgba(108,99,255,0.4))",
+                  }}
+                >
+                  {b.icon}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="text-sm font-semibold">{b.label}</div>
+                  <div className="truncate text-xs text-white/50">{b.hint}</div>
+                </div>
+              </button>
+            ))}
           </div>
         )}
 

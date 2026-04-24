@@ -336,6 +336,217 @@ export const TEMPLATES: Template[] = [
       }),
   },
   {
+    id: "sf-architecture",
+    name: "Salesforce Architecture",
+    description: "Schema, Apex, Flow, permissions, and integration all in one.",
+    accent: "#00a1e0",
+    apply: (editor) =>
+      applyAt(editor, ({ x, y }) => {
+        editor.markHistoryStoppingPoint("apply-template-sf-architecture");
+        editor.createShapes([
+          {
+            id: id(),
+            type: CUSTOM_SHAPE_TYPES.titleBlock,
+            x,
+            y,
+            props: {
+              w: 1260,
+              h: 150,
+              label: "Salesforce Architecture",
+              subtitle: "Schema · Apex · Flow · Permissions · Integration",
+            },
+          },
+          // SObjects row
+          {
+            id: id(),
+            type: CUSTOM_SHAPE_TYPES.sobject,
+            x,
+            y: y + 200,
+            props: {
+              w: 280,
+              h: 220,
+              label: "Account",
+              apiName: "Account",
+              sobjectType: "standard",
+              fields: [
+                "Id | id | pk",
+                "Name | text | req",
+                "OwnerId | lookup | | User",
+                "Industry | picklist",
+              ].join("\n"),
+            },
+          },
+          {
+            id: id(),
+            type: CUSTOM_SHAPE_TYPES.sobject,
+            x: x + 320,
+            y: y + 200,
+            props: {
+              w: 280,
+              h: 220,
+              label: "Contact",
+              apiName: "Contact",
+              sobjectType: "standard",
+              fields: [
+                "Id | id | pk",
+                "LastName | text | req",
+                "Email | email | unq",
+                "AccountId | lookup | | Account",
+              ].join("\n"),
+            },
+          },
+          {
+            id: id(),
+            type: CUSTOM_SHAPE_TYPES.relationshipLabel,
+            x: x + 240,
+            y: y + 285,
+            props: {
+              w: 150,
+              h: 52,
+              label: "Account → Contact",
+              cardinality: "1:N",
+              kind: "lookup",
+            },
+          },
+          // Apex + flow row
+          {
+            id: id(),
+            type: CUSTOM_SHAPE_TYPES.apexClass,
+            x: x + 640,
+            y: y + 200,
+            props: {
+              w: 300,
+              h: 220,
+              label: "AccountService",
+              apiName: "AccountService",
+              classKind: "class",
+              visibility: "public",
+              sharing: "with",
+              members: [
+                "createAccount(Account a): Id | public, static",
+                "linkContact(Id a, Id c): void | public",
+                "sendWelcome(Id cId): Boolean | private",
+              ].join("\n"),
+            },
+          },
+          {
+            id: id(),
+            type: CUSTOM_SHAPE_TYPES.connectedApp,
+            x: x + 960,
+            y: y + 200,
+            props: {
+              w: 300,
+              h: 220,
+              label: "Xero Sync",
+              description:
+                "Two-way sync between SF Accounts/Contacts and Xero.",
+              authType: "oauth2",
+              endpoint: "https://api.xero.com",
+              scopes: "accounting.transactions,accounting.contacts",
+            },
+          },
+          // Flow row
+          {
+            id: id(),
+            type: CUSTOM_SHAPE_TYPES.flowElement,
+            x,
+            y: y + 460,
+            props: {
+              w: 200,
+              h: 96,
+              label: "On new Lead",
+              elementType: "start",
+              details: "Record-triggered flow on Lead insert.",
+            },
+          },
+          {
+            id: id(),
+            type: CUSTOM_SHAPE_TYPES.flowElement,
+            x: x + 230,
+            y: y + 460,
+            props: {
+              w: 220,
+              h: 96,
+              label: "Score > 75?",
+              elementType: "decision",
+              details: "Lead.Score__c decides routing branch.",
+            },
+          },
+          {
+            id: id(),
+            type: CUSTOM_SHAPE_TYPES.flowElement,
+            x: x + 480,
+            y: y + 460,
+            props: {
+              w: 220,
+              h: 96,
+              label: "Convert to Opportunity",
+              elementType: "createRecord",
+              details: "Creates Opportunity, links Account + Contact.",
+            },
+          },
+          {
+            id: id(),
+            type: CUSTOM_SHAPE_TYPES.flowElement,
+            x: x + 730,
+            y: y + 460,
+            props: {
+              w: 220,
+              h: 96,
+              label: "Call AccountService",
+              elementType: "action",
+              details: "Apex action runs sendWelcome(contactId).",
+            },
+          },
+          {
+            id: id(),
+            type: CUSTOM_SHAPE_TYPES.flowElement,
+            x: x + 980,
+            y: y + 460,
+            props: {
+              w: 180,
+              h: 96,
+              label: "Done",
+              elementType: "end",
+              details: "",
+            },
+          },
+          // Permissions
+          {
+            id: id(),
+            type: CUSTOM_SHAPE_TYPES.permissionMatrix,
+            x,
+            y: y + 600,
+            props: {
+              w: 420,
+              h: 220,
+              label: "Object permissions",
+              profile: "Sales User",
+              rows: [
+                "Account | 1 | 1 | 1 | 0 | 0",
+                "Contact | 1 | 1 | 1 | 1 | 0",
+                "Opportunity | 1 | 1 | 1 | 0 | 0",
+                "Lead | 1 | 1 | 1 | 0 | 0",
+              ].join("\n"),
+            },
+          },
+          {
+            id: id(),
+            type: CUSTOM_SHAPE_TYPES.callout,
+            x: x + 460,
+            y: y + 600,
+            props: {
+              w: 800,
+              h: 220,
+              label:
+                "This template covers every SF block — edit any card in the Inspector, or drag connector arrows between the SObjects to make the relationships explicit on canvas.",
+              tone: "info",
+            },
+          },
+        ]);
+      }),
+  },
+  {
     id: "onboarding",
     name: "Onboarding Guide",
     description: "Title, three process steps, and a callout.",

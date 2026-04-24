@@ -11,7 +11,61 @@ export const CUSTOM_SHAPE_TYPES = {
   quote: "quote",
   kpiStat: "kpiStat",
   sobject: "sobject",
+  apexClass: "apexClass",
+  flowElement: "flowElement",
+  permissionMatrix: "permissionMatrix",
+  connectedApp: "connectedApp",
+  relationshipLabel: "relationshipLabel",
 } as const;
+
+/* ─────────────────────── Flow element metadata ─────────────────────── */
+
+export const FLOW_ELEMENT_TYPES = [
+  "start",
+  "end",
+  "screen",
+  "decision",
+  "assignment",
+  "createRecord",
+  "updateRecord",
+  "deleteRecord",
+  "getRecords",
+  "action",
+  "loop",
+  "subflow",
+] as const;
+
+export type FlowElementType = (typeof FLOW_ELEMENT_TYPES)[number];
+
+export const FLOW_ELEMENT_COLOURS: Record<FlowElementType, string> = {
+  start: "#22d3ee",
+  end: "#ec4899",
+  screen: "#8b5cf6",
+  decision: "#f59e0b",
+  assignment: "#a78bfa",
+  createRecord: "#34d399",
+  updateRecord: "#60a5fa",
+  deleteRecord: "#f87171",
+  getRecords: "#22d3ee",
+  action: "#c4b5fd",
+  loop: "#f59e0b",
+  subflow: "#8b5cf6",
+};
+
+export const FLOW_ELEMENT_LABEL: Record<FlowElementType, string> = {
+  start: "Start",
+  end: "End",
+  screen: "Screen",
+  decision: "Decision",
+  assignment: "Assignment",
+  createRecord: "Create Record",
+  updateRecord: "Update Record",
+  deleteRecord: "Delete Record",
+  getRecords: "Get Records",
+  action: "Action",
+  loop: "Loop",
+  subflow: "Subflow",
+};
 
 // Salesforce field types the SObject block renders.
 export const SF_FIELD_TYPES = [
