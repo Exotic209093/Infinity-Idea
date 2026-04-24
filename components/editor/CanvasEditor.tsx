@@ -27,6 +27,7 @@ import { ImportSObjectDialog } from "@/components/ui/ImportSObjectDialog";
 import { ImportApexDialog } from "@/components/ui/ImportApexDialog";
 import { ImportProfileDialog } from "@/components/ui/ImportProfileDialog";
 import { ImportFlowDialog } from "@/components/ui/ImportFlowDialog";
+import { ImportSoqlDialog } from "@/components/ui/ImportSoqlDialog";
 import {
   toFieldsText,
   toMembersText,
@@ -35,6 +36,7 @@ import {
   type ImportedFlow,
   type ImportedProfile,
   type ImportedRelationship,
+  type ImportedSOQL,
   type ImportedSObject,
 } from "@/lib/sfImporter";
 import { CUSTOM_SHAPE_TYPES } from "@/types/shapes";
@@ -76,6 +78,7 @@ export function CanvasEditor() {
   const [apexImportOpen, setApexImportOpen] = useState(false);
   const [profileImportOpen, setProfileImportOpen] = useState(false);
   const [flowImportOpen, setFlowImportOpen] = useState(false);
+  const [soqlImportOpen, setSoqlImportOpen] = useState(false);
   const [presentOpen, setPresentOpen] = useState(false);
   const [presentSnapshot, setPresentSnapshot] = useState<unknown>(null);
   const [savedBlocksVersion, setSavedBlocksVersion] = useState(0);
@@ -618,6 +621,39 @@ export function CanvasEditor() {
     [editor, pushToast],
   );
 
+  const onImportSoql = useCallback(
+    (q: ImportedSOQL) => {
+      if (!editor) return;
+      const viewport = editor.getViewportPageBounds();
+      const id = `shape:${Math.random().toString(36).slice(2, 10)}` as TLShapeId;
+      editor.markHistoryStoppingPoint("import-soql");
+      editor.createShape({
+        id,
+        type: CUSTOM_SHAPE_TYPES.soqlQuery,
+        x: viewport.center.x - 200,
+        y: viewport.center.y - 120,
+        props: {
+          w: 400,
+          h: 240,
+          label: "Query",
+          rawQuery: q.rawQuery,
+          fromObject: q.fromObject,
+          fields: q.fields.join(", "),
+          conditions: q.conditions,
+          orderBy: q.orderBy,
+          limit: q.limit,
+        },
+      });
+      editor.setCurrentTool("select");
+      editor.select(id);
+      pushToast(
+        `Inserted SOQL block${q.fromObject ? ` for ${q.fromObject}` : ""}`,
+        "success",
+      );
+    },
+    [editor, pushToast],
+  );
+
   const onInsertSavedBlock = useCallback(
     (block: SavedBlock) => {
       if (!editor) return;
@@ -688,6 +724,7 @@ export function CanvasEditor() {
         onImportApex={() => setApexImportOpen(true)}
         onImportProfile={() => setProfileImportOpen(true)}
         onImportFlow={() => setFlowImportOpen(true)}
+        onImportSoql={() => setSoqlImportOpen(true)}
       />
 
       <InspectorPanel
@@ -748,6 +785,12 @@ export function CanvasEditor() {
         open={flowImportOpen}
         onClose={() => setFlowImportOpen(false)}
         onInsert={onImportFlow}
+      />
+
+      <ImportSoqlDialog
+        open={soqlImportOpen}
+        onClose={() => setSoqlImportOpen(false)}
+        onInsert={onImportSoql}
       />
 
       <ToastStack toasts={toasts} onDismiss={dismissToast} />

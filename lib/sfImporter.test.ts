@@ -7,6 +7,7 @@ import {
   parseMetadata,
   parseMetadataBatch,
   parseProfileXml,
+  parseSoql,
   relationshipsAmong,
   toFieldsText,
   toMembersText,
@@ -371,6 +372,27 @@ describe("parseProfileXml", () => {
     expect(text).toBe("Account | 1 | 1 | 1 | 0 | 0");
   });
 
+  it("parses a PermissionSet XML with the same parser", () => {
+    const xml = `<?xml version="1.0"?>
+<PermissionSet>
+  <label>Order Mgmt</label>
+  <objectPermissions>
+    <allowCreate>true</allowCreate>
+    <allowRead>true</allowRead>
+    <allowEdit>false</allowEdit>
+    <allowDelete>false</allowDelete>
+    <modifyAllRecords>false</modifyAllRecords>
+    <object>Order</object>
+  </objectPermissions>
+</PermissionSet>`;
+    const p = parseProfileXml(xml);
+    expect(p.label).toBe("Order Mgmt");
+    expect(p.rows).toHaveLength(1);
+    expect(p.rows[0].object).toBe("Order");
+    expect(p.rows[0].create).toBe(true);
+    expect(p.rows[0].update).toBe(false);
+  });
+
   it("throws when there are no objectPermissions", () => {
     expect(() =>
       parseProfileXml(`<?xml version="1.0"?><Profile></Profile>`),
@@ -450,6 +472,48 @@ describe("parseFlowXml", () => {
     expect(() =>
       parseFlowXml(`<?xml version="1.0"?><Flow></Flow>`),
     ).toThrow(/elements/);
+  });
+});
+
+describe("parseSoql", () => {
+  it("extracts SELECT, FROM, WHERE, ORDER BY, LIMIT", () => {
+    const q = parseSoql(
+      "SELECT Id, Name, Email FROM Contact WHERE Email != null ORDER BY LastName LIMIT 50",
+    );
+    expect(q.fromObject).toBe("Contact");
+    expect(q.fields).toEqual(["Id", "Name", "Email"]);
+    expect(q.conditions).toBe("Email != null");
+    expect(q.orderBy).toBe("LastName");
+    expect(q.limit).toBe("50");
+  });
+
+  it("collects relationship hops from dotted field paths", () => {
+    const q = parseSoql(
+      "SELECT Id, Account.Name, Account.Owner.Email FROM Contact",
+    );
+    expect(q.relatedObjects).toEqual(["Account", "Account.Owner"]);
+  });
+
+  it("handles subqueries without breaking the FROM detection", () => {
+    const q = parseSoql(
+      "SELECT Id, (SELECT Id FROM Contacts) FROM Account WHERE Industry = 'Tech'",
+    );
+    expect(q.fromObject).toBe("Account");
+    expect(q.conditions).toBe("Industry = 'Tech'");
+  });
+
+  it("handles upper / lower case keywords", () => {
+    const q = parseSoql("select Id from Account where IsDeleted = false limit 10");
+    expect(q.fromObject).toBe("Account");
+    expect(q.limit).toBe("10");
+  });
+
+  it("rejects empty input", () => {
+    expect(() => parseSoql("   ")).toThrow(/SOQL/);
+  });
+
+  it("rejects queries missing SELECT or FROM", () => {
+    expect(() => parseSoql("UPDATE Account SET Name = 'X'")).toThrow(/SELECT/);
   });
 });
 

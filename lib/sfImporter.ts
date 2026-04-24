@@ -696,6 +696,139 @@ export function parseFlowXml(raw: string): ImportedFlow {
   return { label, apiName, elements };
 }
 
+/* ─────────────────────────── SOQL parser ─────────────────────────── */
+
+export type ImportedSOQL = {
+  rawQuery: string;
+  fromObject: string;
+  fields: string[]; // selected field expressions (relationship-safe)
+  relatedObjects: string[]; // relationship objects referenced via dot paths
+  conditions: string; // raw WHERE text
+  orderBy: string;
+  limit: string;
+  offset: string;
+};
+
+function stripSoqlSubqueries(src: string): {
+  stripped: string;
+  subqueries: string[];
+} {
+  // Replace parenthesised subqueries with a placeholder so they don't
+  // confuse the top-level regex. Keep them so we can list the related
+  // relationships.
+  const subs: string[] = [];
+  let out = "";
+  let depth = 0;
+  let buf = "";
+  for (let i = 0; i < src.length; i++) {
+    const ch = src[i];
+    if (ch === "(") {
+      if (depth === 0) buf = "";
+      depth++;
+      if (depth > 0) buf += ch;
+      else out += ch;
+    } else if (ch === ")") {
+      depth--;
+      buf += ch;
+      if (depth === 0) {
+        subs.push(buf);
+        out += "(subquery)";
+        buf = "";
+      }
+    } else if (depth > 0) {
+      buf += ch;
+    } else {
+      out += ch;
+    }
+  }
+  return { stripped: out, subqueries: subs };
+}
+
+export function parseSoql(raw: string): ImportedSOQL {
+  const trimmed = raw.trim();
+  if (!trimmed) throw new Error("Paste a SOQL query first.");
+  if (!/\bselect\b/i.test(trimmed) || !/\bfrom\b/i.test(trimmed)) {
+    throw new Error("Query must include SELECT and FROM clauses.");
+  }
+
+  // Flatten the query to a single line for anchoring, then split on clause
+  // keywords. Use the original (unflattened) for pretty display / re-save.
+  const { stripped } = stripSoqlSubqueries(trimmed.replace(/\s+/g, " "));
+  const upper = stripped.toUpperCase();
+
+  const selectIdx = upper.indexOf("SELECT");
+  const fromIdx = upper.indexOf(" FROM ");
+  if (selectIdx < 0 || fromIdx < 0) {
+    throw new Error("Could not find SELECT … FROM in the query.");
+  }
+  const fieldsRaw = stripped.slice(selectIdx + 6, fromIdx).trim();
+
+  // The object name and any trailing clauses live after FROM.
+  const rest = stripped.slice(fromIdx + 6).trim();
+
+  const clauseIdxUpper = (needle: string) => {
+    const re = new RegExp(`\\b${needle}\\b`, "i");
+    const m = rest.match(re);
+    return m && typeof m.index === "number" ? m.index : -1;
+  };
+
+  const whereIdx = clauseIdxUpper("WHERE");
+  const withIdx = clauseIdxUpper("WITH");
+  const groupIdx = clauseIdxUpper("GROUP BY");
+  const orderIdx = clauseIdxUpper("ORDER BY");
+  const limitIdx = clauseIdxUpper("LIMIT");
+  const offsetIdx = clauseIdxUpper("OFFSET");
+
+  const candidates = [whereIdx, withIdx, groupIdx, orderIdx, limitIdx, offsetIdx]
+    .filter((i) => i >= 0)
+    .sort((a, b) => a - b);
+  const fromEnd = candidates.length > 0 ? candidates[0] : rest.length;
+  const fromObject = rest.slice(0, fromEnd).trim().split(/\s+/)[0] ?? "";
+
+  const sliceClause = (startIdx: number, nextIdx: number) => {
+    if (startIdx < 0) return "";
+    const end = nextIdx >= 0 ? nextIdx : rest.length;
+    return rest.slice(startIdx, end).trim();
+  };
+
+  const nextAfter = (idx: number) => {
+    const larger = candidates.filter((c) => c > idx);
+    return larger.length > 0 ? larger[0] : rest.length;
+  };
+
+  const whereClause = whereIdx >= 0 ? sliceClause(whereIdx + 5, nextAfter(whereIdx)) : "";
+  const orderClause = orderIdx >= 0 ? sliceClause(orderIdx + 8, nextAfter(orderIdx)) : "";
+  const limitClause = limitIdx >= 0 ? sliceClause(limitIdx + 5, nextAfter(limitIdx)) : "";
+  const offsetClause = offsetIdx >= 0 ? sliceClause(offsetIdx + 6, nextAfter(offsetIdx)) : "";
+
+  const fields = fieldsRaw
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean);
+
+  const relatedObjects = Array.from(
+    new Set(
+      fields
+        .map((f) => {
+          const segs = f.split(".");
+          return segs.length > 1 ? segs.slice(0, -1).join(".") : "";
+        })
+        .filter(Boolean),
+    ),
+  );
+
+  return {
+    rawQuery: trimmed,
+    fromObject,
+    fields,
+    relatedObjects,
+    conditions: whereClause,
+    orderBy: orderClause,
+    limit: limitClause,
+    offset: offsetClause,
+  };
+}
+
 /* ─────────────────────────── Shape-friendly output ─────────────────────────── */
 
 function fieldFlags(f: ImportedField): string {

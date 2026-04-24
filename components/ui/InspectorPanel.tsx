@@ -36,6 +36,7 @@ export function InspectorPanel({
     if (t === CUSTOM_SHAPE_TYPES.permissionMatrix) return "Permission Matrix";
     if (t === CUSTOM_SHAPE_TYPES.connectedApp) return "Connected App";
     if (t === CUSTOM_SHAPE_TYPES.relationshipLabel) return "Relationship";
+    if (t === CUSTOM_SHAPE_TYPES.soqlQuery) return "SOQL Query";
     return t.charAt(0).toUpperCase() + t.slice(1);
   }, [selectedShape]);
 
@@ -471,6 +472,45 @@ function ShapeFields({
               { label: "Junction", value: "junction" },
             ]}
             onChange={(v) => update({ kind: v })}
+          />
+        </>
+      )}
+
+      {shape.type === CUSTOM_SHAPE_TYPES.soqlQuery && (
+        <>
+          <TextField
+            label="Query"
+            value={String(props.rawQuery ?? "")}
+            onChange={(v) => update({ rawQuery: v })}
+            multiline
+          />
+          <TextField
+            label="From object"
+            value={String(props.fromObject ?? "")}
+            onChange={(v) => update({ fromObject: v })}
+          />
+          <TextField
+            label="Fields (comma separated)"
+            value={String(props.fields ?? "")}
+            onChange={(v) => update({ fields: v })}
+            multiline
+          />
+          <TextField
+            label="Where"
+            value={String(props.conditions ?? "")}
+            onChange={(v) => update({ conditions: v })}
+            multiline
+          />
+          <TextField
+            label="Order by"
+            value={String(props.orderBy ?? "")}
+            onChange={(v) => update({ orderBy: v })}
+          />
+          <TextField
+            label="Limit"
+            value={String(props.limit ?? "")}
+            onChange={(v) => update({ limit: v })}
+            placeholder="e.g. 100"
           />
         </>
       )}

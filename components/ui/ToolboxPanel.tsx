@@ -36,6 +36,7 @@ import {
   Link2,
   Cloud,
   FileDown,
+  FileCode2,
 } from "lucide-react";
 import { CUSTOM_SHAPE_TYPES } from "@/types/shapes";
 
@@ -51,6 +52,7 @@ type Props = {
   onImportApex: () => void;
   onImportProfile: () => void;
   onImportFlow: () => void;
+  onImportSoql: () => void;
 };
 
 const shapeItems: Array<{ id: string; label: string; icon: React.ReactNode }> = [
@@ -101,6 +103,7 @@ const salesforceItems: Array<{
   { type: CUSTOM_SHAPE_TYPES.permissionMatrix, label: "Permissions", hint: "CRUD matrix per profile", icon: <ShieldCheck size={16} /> },
   { type: CUSTOM_SHAPE_TYPES.connectedApp, label: "Connected App", hint: "Integration / OAuth app", icon: <Plug size={16} /> },
   { type: CUSTOM_SHAPE_TYPES.relationshipLabel, label: "Relationship", hint: "Cardinality arrow chip", icon: <Link2 size={16} /> },
+  { type: CUSTOM_SHAPE_TYPES.soqlQuery, label: "SOQL Query", hint: "Highlighted query block", icon: <FileCode2 size={16} /> },
 ];
 
 export function ToolboxPanel({
@@ -113,6 +116,7 @@ export function ToolboxPanel({
   onImportApex,
   onImportProfile,
   onImportFlow,
+  onImportSoql,
 }: Props) {
   const [tab, setTab] = useState<Tab>("blocks");
   const [savedBlocks, setSavedBlocks] = useState<SavedBlock[]>([]);
@@ -265,6 +269,12 @@ export function ToolboxPanel({
                 title="Paste .flow XML"
                 label="Flow"
                 hint="Becomes connected Flow Elements"
+              />
+              <ImportButton
+                onClick={onImportSoql}
+                title="Paste a SOQL query"
+                label="SOQL"
+                hint="Visualised query block"
               />
             </div>
             {salesforceItems.map((b) => (

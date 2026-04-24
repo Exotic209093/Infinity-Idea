@@ -16,6 +16,7 @@ export const CUSTOM_SHAPE_TYPES = {
   permissionMatrix: "permissionMatrix",
   connectedApp: "connectedApp",
   relationshipLabel: "relationshipLabel",
+  soqlQuery: "soqlQuery",
 } as const;
 
 /* ─────────────────────── Flow element metadata ─────────────────────── */
