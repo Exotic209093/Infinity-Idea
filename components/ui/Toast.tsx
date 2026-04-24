@@ -46,7 +46,7 @@ function Toast({
     );
 
   return (
-    <div className="glass-strong pointer-events-auto flex min-w-[280px] items-center gap-3 rounded-xl px-4 py-3 text-sm shadow-glass">
+    <div className="glass-strong animate-toast pointer-events-auto flex min-w-[280px] items-center gap-3 rounded-xl px-4 py-3 text-sm shadow-glass">
       {icon}
       <span className="flex-1">{toast.text}</span>
       <button

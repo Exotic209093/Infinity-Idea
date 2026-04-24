@@ -83,3 +83,73 @@ main {
 .tl-container {
   background: transparent !important;
 }
+
+/* ─────────────────────────── Animations ─────────────────────────── */
+
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes fade-up {
+  from { opacity: 0; transform: translate3d(0, 14px, 0); }
+  to { opacity: 1; transform: translate3d(0, 0, 0); }
+}
+@keyframes fade-down {
+  from { opacity: 0; transform: translate3d(0, -10px, 0); }
+  to { opacity: 1; transform: translate3d(0, 0, 0); }
+}
+@keyframes slide-in-left {
+  from { opacity: 0; transform: translate3d(-16px, 0, 0); }
+  to { opacity: 1; transform: translate3d(0, 0, 0); }
+}
+@keyframes slide-in-right {
+  from { opacity: 0; transform: translate3d(16px, 0, 0); }
+  to { opacity: 1; transform: translate3d(0, 0, 0); }
+}
+@keyframes pop-in {
+  0% { opacity: 0; transform: scale(0.94); }
+  60% { opacity: 1; transform: scale(1.01); }
+  100% { transform: scale(1); }
+}
+@keyframes slide-up-toast {
+  from { opacity: 0; transform: translate3d(0, 18px, 0) scale(0.98); }
+  to { opacity: 1; transform: translate3d(0, 0, 0) scale(1); }
+}
+
+.animate-fade-in { animation: fade-in 220ms ease-out both; }
+.animate-fade-up { animation: fade-up 360ms cubic-bezier(0.2, 0.7, 0.2, 1) both; }
+.animate-fade-down { animation: fade-down 320ms cubic-bezier(0.2, 0.7, 0.2, 1) both; }
+.animate-slide-in-left { animation: slide-in-left 320ms cubic-bezier(0.2, 0.7, 0.2, 1) both; }
+.animate-slide-in-right { animation: slide-in-right 320ms cubic-bezier(0.2, 0.7, 0.2, 1) both; }
+.animate-pop-in { animation: pop-in 260ms cubic-bezier(0.2, 0.9, 0.3, 1.2) both; }
+.animate-toast { animation: slide-up-toast 260ms cubic-bezier(0.2, 0.7, 0.2, 1) both; }
+
+/* Subtle lift on the toolbox block cards */
+.template-card,
+.toolbox-block {
+  transition: transform 140ms ease, box-shadow 140ms ease, border-color 140ms ease, background-color 140ms ease;
+}
+.template-card:hover,
+.toolbox-block:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.25), 0 0 0 1px rgba(255, 255, 255, 0.06) inset;
+}
+.template-card:active,
+.toolbox-block:active {
+  transform: translateY(0);
+  transition-duration: 60ms;
+}
+
+/* Honor reduced-motion preferences — disable the entrance animations but
+   keep instant visibility. */
+@media (prefers-reduced-motion: reduce) {
+  .animate-fade-in,
+  .animate-fade-up,
+  .animate-fade-down,
+  .animate-slide-in-left,
+  .animate-slide-in-right,
+  .animate-pop-in,
+  .animate-toast {
+    animation: none !important;
+  }
+}

@@ -64,8 +64,8 @@ export function ToolboxPanel({ onSelectTool, onInsertCustom, onUploadImage }: Pr
   const [tab, setTab] = useState<Tab>("blocks");
 
   return (
-    <div className="glass-strong pointer-events-auto absolute left-3 top-20 z-10 hidden w-64 flex-col overflow-hidden rounded-2xl shadow-glass md:flex"
-         style={{ maxHeight: "calc(100vh - 110px)" }}>
+    <div className="glass-strong animate-slide-in-left pointer-events-auto absolute left-3 top-20 z-10 hidden w-64 flex-col overflow-hidden rounded-2xl shadow-glass md:flex"
+         style={{ maxHeight: "calc(100vh - 110px)", animationDelay: "120ms" }}>
       <div className="flex border-b border-white/10 p-1">
         <TabButton active={tab === "shapes"} onClick={() => setTab("shapes")}>
           Shapes
@@ -107,7 +107,7 @@ export function ToolboxPanel({ onSelectTool, onInsertCustom, onUploadImage }: Pr
               <button
                 key={b.type}
                 onClick={() => onInsertCustom(b.type)}
-                className="group flex items-center gap-3 rounded-lg border border-white/5 bg-white/5 p-3 text-left transition hover:border-white/20 hover:bg-white/10"
+                className="toolbox-block group flex items-center gap-3 rounded-lg border border-white/5 bg-white/5 p-3 text-left hover:border-white/20 hover:bg-white/10"
               >
                 <div
                   className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-md"

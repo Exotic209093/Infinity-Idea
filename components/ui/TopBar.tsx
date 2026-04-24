@@ -4,11 +4,12 @@ import { useState } from "react";
 import {
   Sparkles,
   FilePlus2,
-  FolderOpen,
   Save,
   Download,
   Undo2,
   Redo2,
+  LayoutTemplate,
+  Keyboard,
 } from "lucide-react";
 import { FileMenu } from "./FileMenu";
 import { ExportMenu } from "./ExportMenu";
@@ -22,6 +23,8 @@ type Props = {
   onExportPdf: () => void;
   onUndo: () => void;
   onRedo: () => void;
+  onOpenTemplates: () => void;
+  onOpenShortcuts: () => void;
 };
 
 export function TopBar({
@@ -33,13 +36,15 @@ export function TopBar({
   onExportPdf,
   onUndo,
   onRedo,
+  onOpenTemplates,
+  onOpenShortcuts,
 }: Props) {
   const [fileOpen, setFileOpen] = useState(false);
   const [exportOpen, setExportOpen] = useState(false);
 
   return (
     <div className="pointer-events-none absolute inset-x-0 top-0 z-20 flex justify-center p-3">
-      <div className="glass-strong pointer-events-auto flex items-center gap-2 rounded-2xl px-3 py-2 shadow-glass">
+      <div className="glass-strong animate-fade-down pointer-events-auto flex items-center gap-2 rounded-2xl px-3 py-2 shadow-glass">
         <div className="flex items-center gap-2 pr-3">
           <div
             className="flex h-8 w-8 items-center justify-center rounded-lg"
@@ -117,9 +122,27 @@ export function TopBar({
         <Separator />
 
         <button
+          className="btn-ghost flex items-center gap-2 rounded-lg px-3 py-1.5 text-sm"
+          onClick={onOpenTemplates}
+          title="Browse templates"
+        >
+          <LayoutTemplate size={14} /> Templates
+        </button>
+
+        <button
+          className="btn-ghost rounded-lg px-2.5 py-1.5"
+          onClick={onOpenShortcuts}
+          title="Keyboard shortcuts (?)"
+        >
+          <Keyboard size={14} />
+        </button>
+
+        <Separator />
+
+        <button
           className="btn-primary flex items-center gap-2 rounded-lg px-3 py-1.5 text-sm font-medium"
           onClick={onSave}
-          title="Save a .infidoc.json snapshot"
+          title="Save a .infidoc.json snapshot (Ctrl+S)"
         >
           <Save size={14} /> Save
         </button>

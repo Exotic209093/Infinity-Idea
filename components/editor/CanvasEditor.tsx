@@ -16,10 +16,14 @@ import { TopBar } from "@/components/ui/TopBar";
 import { ToolboxPanel } from "@/components/ui/ToolboxPanel";
 import { InspectorPanel } from "@/components/ui/InspectorPanel";
 import { ToastStack, type ToastMessage } from "@/components/ui/Toast";
+import { EmptyCanvas } from "@/components/ui/EmptyCanvas";
+import { TemplatesDialog } from "@/components/ui/TemplatesDialog";
+import { ShortcutsDialog } from "@/components/ui/ShortcutsDialog";
 import { downloadSaveFile } from "@/lib/io/saveJson";
 import { loadSaveFileFromFile } from "@/lib/io/loadJson";
 import { exportPng, exportSvg } from "@/lib/io/exportImage";
 import { exportPdf } from "@/lib/io/exportPdf";
+import type { Template } from "@/lib/templates";
 
 const Tldraw = dynamic(() => import("tldraw").then((m) => m.Tldraw), {
   ssr: false,
@@ -34,6 +38,9 @@ export function CanvasEditor() {
   const [editor, setEditor] = useState<Editor | null>(null);
   const [selected, setSelected] = useState<TLShape | null>(null);
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
+  const [shapeCount, setShapeCount] = useState(0);
+  const [templatesOpen, setTemplatesOpen] = useState(false);
+  const [shortcutsOpen, setShortcutsOpen] = useState(false);
   const nextToastId = useRef(1);
 
   const pushToast = useCallback((text: string, kind: ToastMessage["kind"] = "info") => {
@@ -57,6 +64,7 @@ export function CanvasEditor() {
       } else {
         setSelected(null);
       }
+      setShapeCount(editor.getCurrentPageShapeIds().size);
     };
     sync();
     const dispose = editor.store.listen(sync, { scope: "all" });
@@ -139,6 +147,63 @@ export function CanvasEditor() {
 
   const onUndo = useCallback(() => editor?.undo(), [editor]);
   const onRedo = useCallback(() => editor?.redo(), [editor]);
+
+  const onPickTemplate = useCallback(
+    (template: Template) => {
+      if (!editor) return;
+      setTemplatesOpen(false);
+      if (template.id === "blank") {
+        pushToast("Blank canvas ready", "success");
+        return;
+      }
+      template.apply(editor);
+      // Centre the viewport on what we just added so the user can see the
+      // whole template without having to pan.
+      const all = Array.from(editor.getCurrentPageShapeIds());
+      if (all.length > 0) editor.zoomToFit({ animation: { duration: 400 } });
+      pushToast(`Applied template: ${template.name}`, "success");
+    },
+    [editor, pushToast],
+  );
+
+  // Global keyboard shortcuts. We intentionally do nothing while the user is
+  // typing in an input/textarea so we don't steal their keystrokes.
+  useEffect(() => {
+    const isTyping = (t: EventTarget | null) => {
+      const el = t as HTMLElement | null;
+      if (!el) return false;
+      const tag = el.tagName;
+      return (
+        tag === "INPUT" ||
+        tag === "TEXTAREA" ||
+        el.isContentEditable ||
+        el.getAttribute?.("contenteditable") === "true"
+      );
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (isTyping(e.target)) return;
+      const mod = e.ctrlKey || e.metaKey;
+      if (mod && e.key.toLowerCase() === "s") {
+        e.preventDefault();
+        onSave();
+      } else if (mod && e.key.toLowerCase() === "o") {
+        e.preventDefault();
+        // Programmatically click the hidden file input in the File menu.
+        const input = document.querySelector<HTMLInputElement>(
+          'input[type="file"][accept*="json"]',
+        );
+        input?.click();
+      } else if (!mod && e.key === "?") {
+        e.preventDefault();
+        setShortcutsOpen(true);
+      } else if (!mod && !e.shiftKey && e.key.toLowerCase() === "t") {
+        e.preventDefault();
+        setTemplatesOpen(true);
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onSave]);
 
   /* ---------- toolbox handlers ---------- */
 
@@ -238,6 +303,10 @@ export function CanvasEditor() {
         />
       </div>
 
+      {editor && shapeCount === 0 && (
+        <EmptyCanvas onBrowseTemplates={() => setTemplatesOpen(true)} />
+      )}
+
       <TopBar
         onNew={onNew}
         onOpen={onOpen}
@@ -247,6 +316,8 @@ export function CanvasEditor() {
         onExportPdf={onExportPdf}
         onUndo={onUndo}
         onRedo={onRedo}
+        onOpenTemplates={() => setTemplatesOpen(true)}
+        onOpenShortcuts={() => setShortcutsOpen(true)}
       />
 
       <ToolboxPanel
@@ -256,6 +327,17 @@ export function CanvasEditor() {
       />
 
       <InspectorPanel editor={editor} selectedShape={selected} />
+
+      <TemplatesDialog
+        open={templatesOpen}
+        onClose={() => setTemplatesOpen(false)}
+        onPick={onPickTemplate}
+      />
+
+      <ShortcutsDialog
+        open={shortcutsOpen}
+        onClose={() => setShortcutsOpen(false)}
+      />
 
       <ToastStack toasts={toasts} onDismiss={dismissToast} />
     </div>

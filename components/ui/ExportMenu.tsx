@@ -31,7 +31,7 @@ export function ExportMenu({
   return (
     <div
       ref={menuRef}
-      className="glass-strong absolute left-0 top-[calc(100%+8px)] z-30 w-56 overflow-hidden rounded-xl shadow-glass"
+      className="glass-strong animate-fade-down absolute left-0 top-[calc(100%+8px)] z-30 w-56 overflow-hidden rounded-xl shadow-glass"
     >
       <MenuItem
         icon={<FileText size={14} />}

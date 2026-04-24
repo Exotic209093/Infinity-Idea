@@ -27,6 +27,36 @@ test.describe("Infinite Idea — smoke", () => {
     expect(name).toMatch(/\.infidoc\.json$/);
   });
 
+  test("opens the templates dialog via ? shortcut and applies one", async ({
+    page,
+  }) => {
+    await page.goto("/");
+    await expect(page.locator(".tl-container")).toBeVisible({ timeout: 30_000 });
+
+    // Open templates dialog via the TopBar button
+    await page.getByRole("button", { name: /^Templates$/ }).click();
+    await expect(page.getByText("Start a document")).toBeVisible();
+
+    // Apply the Process Flow template — should drop six shapes on the canvas
+    await page.getByRole("button", { name: /Process Flow/ }).click();
+    await expect(page.getByText("Start a document")).toBeHidden();
+    await expect(page.locator(".tl-shape")).toHaveCount(6, { timeout: 5_000 });
+  });
+
+  test("keyboard-shortcuts button opens the shortcuts dialog", async ({
+    page,
+  }) => {
+    await page.goto("/");
+    await expect(page.locator(".tl-container")).toBeVisible({ timeout: 30_000 });
+
+    await page
+      .getByRole("button", { name: /Keyboard shortcuts/ })
+      .click();
+    await expect(page.getByText("Keyboard shortcuts")).toBeVisible();
+    await page.keyboard.press("Escape");
+    await expect(page.getByText("Keyboard shortcuts")).toBeHidden();
+  });
+
   test("shows an error toast for an invalid save file", async ({ page }) => {
     await page.goto("/");
     await expect(page.locator(".tl-container")).toBeVisible({ timeout: 30_000 });

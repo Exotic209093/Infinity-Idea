@@ -24,8 +24,8 @@ export function InspectorPanel({ editor, selectedShape }: Props) {
   }, [selectedShape]);
 
   return (
-    <div className="glass-strong pointer-events-auto absolute right-3 z-10 hidden w-72 flex-col overflow-hidden rounded-2xl shadow-glass md:flex"
-         style={{ top: 320, maxHeight: "calc(100vh - 340px)" }}>
+    <div className="glass-strong animate-slide-in-right pointer-events-auto absolute right-3 z-10 hidden w-72 flex-col overflow-hidden rounded-2xl shadow-glass md:flex"
+         style={{ top: 320, maxHeight: "calc(100vh - 340px)", animationDelay: "160ms" }}>
       <div className="border-b border-white/10 p-3">
         <div className="text-[11px] font-semibold uppercase tracking-wider text-white/50">
           Inspector
