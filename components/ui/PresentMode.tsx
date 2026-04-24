@@ -85,6 +85,8 @@ export function PresentMode({ open, onClose, snapshot }: Props) {
     setPageName(current.name);
   };
 
+  const [fading, setFading] = useState(false);
+
   const go = (direction: 1 | -1) => {
     const ed = editorRef.current;
     if (!ed) return;
@@ -92,9 +94,14 @@ export function PresentMode({ open, onClose, snapshot }: Props) {
     const currentIdx = pages.findIndex((p) => p.id === ed.getCurrentPageId());
     const next = currentIdx + direction;
     if (next < 0 || next >= pages.length) return;
-    ed.setCurrentPage(pages[next].id);
-    ed.zoomToFit({ animation: { duration: 300 } });
-    refresh(ed);
+    // Fade out, switch page, fade in.
+    setFading(true);
+    setTimeout(() => {
+      ed.setCurrentPage(pages[next].id);
+      ed.zoomToFit({ animation: { duration: 200 } });
+      refresh(ed);
+      requestAnimationFrame(() => setFading(false));
+    }, 180);
   };
 
   useEffect(() => {
@@ -144,7 +151,10 @@ export function PresentMode({ open, onClose, snapshot }: Props) {
       aria-modal="true"
       aria-label="Presentation mode"
     >
-      <div className="absolute inset-0">
+      <div
+        className="absolute inset-0 transition-opacity duration-200 ease-out"
+        style={{ opacity: fading ? 0 : 1 }}
+      >
         <Tldraw
           shapeUtils={shapeUtils}
           onMount={handleMount}

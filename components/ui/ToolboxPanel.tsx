@@ -18,6 +18,9 @@ import {
   Crown,
   MessageSquare,
   ListChecks,
+  Table as TableIcon,
+  Quote as QuoteIcon,
+  TrendingUp,
 } from "lucide-react";
 import { CUSTOM_SHAPE_TYPES } from "@/types/shapes";
 
@@ -60,6 +63,9 @@ const blockItems: Array<{
   { type: CUSTOM_SHAPE_TYPES.swimlane, label: "Swimlane", hint: "Grouping lane", icon: <Columns3 size={16} /> },
   { type: CUSTOM_SHAPE_TYPES.callout, label: "Callout", hint: "Important note", icon: <MessageSquare size={16} /> },
   { type: CUSTOM_SHAPE_TYPES.checklist, label: "Checklist", hint: "Checkable list", icon: <ListChecks size={16} /> },
+  { type: CUSTOM_SHAPE_TYPES.kpiStat, label: "KPI Stat", hint: "Metric with trend", icon: <TrendingUp size={16} /> },
+  { type: CUSTOM_SHAPE_TYPES.table, label: "Table", hint: "Editable grid", icon: <TableIcon size={16} /> },
+  { type: CUSTOM_SHAPE_TYPES.quote, label: "Quote", hint: "Pull quote + attribution", icon: <QuoteIcon size={16} /> },
 ];
 
 export function ToolboxPanel({ onSelectTool, onInsertCustom, onUploadImage }: Props) {

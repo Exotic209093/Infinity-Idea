@@ -9,13 +9,15 @@ import {
   Pencil,
   Trash2,
   FileText,
+  Sparkles,
 } from "lucide-react";
 
 type Props = {
   editor: Editor | null;
+  onAddPageFromTemplate: () => void;
 };
 
-export function PagesBar({ editor }: Props) {
+export function PagesBar({ editor, onAddPageFromTemplate }: Props) {
   const [, force] = useState(0);
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -138,8 +140,20 @@ export function PagesBar({ editor }: Props) {
                   }}
                   className="btn-ghost flex flex-1 items-center justify-center gap-1.5 rounded-md px-2 py-1.5 text-xs font-semibold"
                 >
-                  <Plus size={12} /> Add
+                  <Plus size={12} /> Add blank
                 </button>
+                <button
+                  onClick={() => {
+                    setMenuOpen(false);
+                    onAddPageFromTemplate();
+                  }}
+                  className="btn-ghost flex flex-1 items-center justify-center gap-1.5 rounded-md px-2 py-1.5 text-xs font-semibold"
+                  title="Add a new page from a template"
+                >
+                  <Sparkles size={12} /> Template
+                </button>
+              </div>
+              <div className="flex items-center gap-1 border-t border-white/10 p-1">
                 <button
                   onClick={() => {
                     renameCurrent();

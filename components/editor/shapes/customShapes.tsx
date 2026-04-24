@@ -664,6 +664,344 @@ export class ChecklistShapeUtil extends BaseBoxShapeUtil<ChecklistShape> {
   }
 }
 
+/* ---------- Table ---------- */
+
+export type TableShape = TLBaseShape<
+  "table",
+  {
+    w: number;
+    h: number;
+    label: string;
+    // Rows separated by '\n', cells within a row separated by '\t'.
+    // First row is the header.
+    cells: string;
+  }
+>;
+
+function parseTable(cells: string): string[][] {
+  return cells.split("\n").map((row) => row.split("\t"));
+}
+
+export class TableShapeUtil extends BaseBoxShapeUtil<TableShape> {
+  static override type = CUSTOM_SHAPE_TYPES.table;
+  static override props: RecordProps<TableShape> = {
+    ...baseProps,
+    cells: T.string,
+  };
+  override getDefaultProps(): TableShape["props"] {
+    const defaults = [
+      ["Metric", "Q1", "Q2", "Q3"],
+      ["Revenue", "$120k", "$145k", "$168k"],
+      ["New clients", "8", "12", "15"],
+      ["NPS", "62", "67", "71"],
+    ];
+    return {
+      w: 480,
+      h: 200,
+      label: "",
+      cells: defaults.map((r) => r.join("\t")).join("\n"),
+    };
+  }
+  override getGeometry(shape: TableShape) {
+    return baseGeometry(shape);
+  }
+  override onResize(shape: TableShape, info: TLResizeInfo<TableShape>) {
+    return onResize(shape, info);
+  }
+  override component(shape: TableShape) {
+    const rows = parseTable(shape.props.cells);
+    const header = rows[0] ?? [];
+    const body = rows.slice(1);
+    const cols = Math.max(header.length, ...body.map((r) => r.length));
+    return (
+      <HTMLContainer
+        style={{
+          width: shape.props.w,
+          height: shape.props.h,
+          borderRadius: 14,
+          background: "rgba(20,20,32,0.7)",
+          border: "1px solid rgba(139,92,246,0.35)",
+          overflow: "hidden",
+          color: "#fff",
+          display: "flex",
+          flexDirection: "column",
+        }}
+      >
+        <table
+          style={{
+            width: "100%",
+            height: "100%",
+            borderCollapse: "collapse",
+            fontSize: 13,
+            tableLayout: "fixed",
+          }}
+        >
+          <thead>
+            <tr
+              style={{
+                background:
+                  "linear-gradient(135deg, rgba(108,99,255,0.6), rgba(236,72,153,0.45))",
+              }}
+            >
+              {Array.from({ length: cols }, (_, i) => (
+                <th
+                  key={i}
+                  style={{
+                    padding: "10px 12px",
+                    textAlign: "left",
+                    fontWeight: 700,
+                    color: "#fff",
+                    borderRight:
+                      i < cols - 1 ? "1px solid rgba(255,255,255,0.15)" : "none",
+                  }}
+                >
+                  {header[i] ?? ""}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {body.map((row, r) => (
+              <tr
+                key={r}
+                style={{
+                  background:
+                    r % 2 === 0 ? "rgba(255,255,255,0.02)" : "transparent",
+                }}
+              >
+                {Array.from({ length: cols }, (_, c) => (
+                  <td
+                    key={c}
+                    style={{
+                      padding: "8px 12px",
+                      borderTop: "1px solid rgba(255,255,255,0.08)",
+                      borderRight:
+                        c < cols - 1
+                          ? "1px solid rgba(255,255,255,0.08)"
+                          : "none",
+                      color: "rgba(255,255,255,0.88)",
+                    }}
+                  >
+                    {row[c] ?? ""}
+                  </td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </HTMLContainer>
+    );
+  }
+  override indicator(shape: TableShape) {
+    return <rect width={shape.props.w} height={shape.props.h} rx={14} />;
+  }
+}
+
+/* ---------- Quote ---------- */
+
+export type QuoteShape = TLBaseShape<
+  "quote",
+  { w: number; h: number; label: string; author: string; role: string }
+>;
+
+export class QuoteShapeUtil extends BaseBoxShapeUtil<QuoteShape> {
+  static override type = CUSTOM_SHAPE_TYPES.quote;
+  static override props: RecordProps<QuoteShape> = {
+    ...baseProps,
+    author: T.string,
+    role: T.string,
+  };
+  override getDefaultProps(): QuoteShape["props"] {
+    return {
+      w: 420,
+      h: 180,
+      label:
+        "This changed the way our whole team works. Onboarding that used to take a week now takes two hours.",
+      author: "Taylor Kim",
+      role: "Head of Operations",
+    };
+  }
+  override getGeometry(shape: QuoteShape) {
+    return baseGeometry(shape);
+  }
+  override onResize(shape: QuoteShape, info: TLResizeInfo<QuoteShape>) {
+    return onResize(shape, info);
+  }
+  override component(shape: QuoteShape) {
+    return (
+      <HTMLContainer
+        style={{
+          width: shape.props.w,
+          height: shape.props.h,
+          borderRadius: 16,
+          background: "rgba(20,20,32,0.7)",
+          border: "1px solid rgba(236,72,153,0.35)",
+          overflow: "hidden",
+          display: "flex",
+          color: "#fff",
+        }}
+      >
+        <div
+          style={{
+            width: 6,
+            alignSelf: "stretch",
+            background: "linear-gradient(180deg,#a855f7,#ec4899)",
+          }}
+        />
+        <div
+          style={{
+            flex: 1,
+            padding: "18px 22px",
+            display: "flex",
+            flexDirection: "column",
+            justifyContent: "center",
+          }}
+        >
+          <div
+            style={{
+              fontSize: 17,
+              lineHeight: 1.45,
+              fontStyle: "italic",
+              fontWeight: 500,
+              color: "rgba(255,255,255,0.95)",
+            }}
+          >
+            &ldquo;{shape.props.label}&rdquo;
+          </div>
+          <div
+            style={{ marginTop: 14, fontSize: 13, color: "rgba(255,255,255,0.7)" }}
+          >
+            — {shape.props.author}
+            {shape.props.role && (
+              <span style={{ color: "rgba(255,255,255,0.5)" }}>
+                , {shape.props.role}
+              </span>
+            )}
+          </div>
+        </div>
+      </HTMLContainer>
+    );
+  }
+  override indicator(shape: QuoteShape) {
+    return <rect width={shape.props.w} height={shape.props.h} rx={16} />;
+  }
+}
+
+/* ---------- KPI Stat ---------- */
+
+export type KpiStatShape = TLBaseShape<
+  "kpiStat",
+  {
+    w: number;
+    h: number;
+    label: string;
+    value: string;
+    delta: string;
+    trend: "up" | "down" | "flat";
+  }
+>;
+
+export class KpiStatShapeUtil extends BaseBoxShapeUtil<KpiStatShape> {
+  static override type = CUSTOM_SHAPE_TYPES.kpiStat;
+  static override props: RecordProps<KpiStatShape> = {
+    ...baseProps,
+    value: T.string,
+    delta: T.string,
+    trend: T.literalEnum("up", "down", "flat"),
+  };
+  override getDefaultProps(): KpiStatShape["props"] {
+    return {
+      w: 240,
+      h: 140,
+      label: "Monthly active users",
+      value: "12,480",
+      delta: "+ 18%",
+      trend: "up",
+    };
+  }
+  override getGeometry(shape: KpiStatShape) {
+    return baseGeometry(shape);
+  }
+  override onResize(shape: KpiStatShape, info: TLResizeInfo<KpiStatShape>) {
+    return onResize(shape, info);
+  }
+  override component(shape: KpiStatShape) {
+    const trendColour =
+      shape.props.trend === "up"
+        ? "#22d3ee"
+        : shape.props.trend === "down"
+        ? "#ec4899"
+        : "rgba(255,255,255,0.55)";
+    const trendGlyph =
+      shape.props.trend === "up"
+        ? "▲"
+        : shape.props.trend === "down"
+        ? "▼"
+        : "—";
+    return (
+      <HTMLContainer
+        style={{
+          width: shape.props.w,
+          height: shape.props.h,
+          borderRadius: 16,
+          background: "rgba(20,20,32,0.7)",
+          border: "1px solid rgba(34,211,238,0.25)",
+          padding: 18,
+          display: "flex",
+          flexDirection: "column",
+          justifyContent: "space-between",
+          color: "#fff",
+          overflow: "hidden",
+          boxShadow: "0 4px 18px rgba(34,211,238,0.1)",
+        }}
+      >
+        <div
+          style={{
+            fontSize: 11,
+            textTransform: "uppercase",
+            letterSpacing: 0.6,
+            color: "rgba(255,255,255,0.55)",
+            fontWeight: 700,
+          }}
+        >
+          {shape.props.label}
+        </div>
+        <div
+          style={{
+            fontSize: 32,
+            fontWeight: 800,
+            lineHeight: 1,
+            letterSpacing: -0.5,
+            background:
+              "linear-gradient(135deg,#ffffff,rgba(255,255,255,0.78))",
+            WebkitBackgroundClip: "text",
+            WebkitTextFillColor: "transparent",
+            backgroundClip: "text",
+          }}
+        >
+          {shape.props.value}
+        </div>
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 6,
+            fontSize: 13,
+            fontWeight: 700,
+            color: trendColour,
+          }}
+        >
+          <span>{trendGlyph}</span>
+          <span>{shape.props.delta}</span>
+        </div>
+      </HTMLContainer>
+    );
+  }
+  override indicator(shape: KpiStatShape) {
+    return <rect width={shape.props.w} height={shape.props.h} rx={16} />;
+  }
+}
+
 export const customShapeUtils = [
   ProcessStepShapeUtil,
   DecisionGateShapeUtil,
@@ -673,4 +1011,7 @@ export const customShapeUtils = [
   TitleBlockShapeUtil,
   CalloutShapeUtil,
   ChecklistShapeUtil,
+  TableShapeUtil,
+  QuoteShapeUtil,
+  KpiStatShapeUtil,
 ];

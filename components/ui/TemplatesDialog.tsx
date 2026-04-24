@@ -8,16 +8,22 @@ type Props = {
   open: boolean;
   onClose: () => void;
   onPick: (template: Template) => void;
+  mode?: "current" | "new-page";
 };
 
-export function TemplatesDialog({ open, onClose, onPick }: Props) {
+export function TemplatesDialog({
+  open,
+  onClose,
+  onPick,
+  mode = "current",
+}: Props) {
+  const title = mode === "new-page" ? "Add a new page" : "Start a document";
+  const subtitle =
+    mode === "new-page"
+      ? "Pick a template or add a blank page."
+      : "Pick a template or begin from a blank canvas.";
   return (
-    <Dialog
-      open={open}
-      onClose={onClose}
-      title="Start a document"
-      subtitle="Pick a template or begin from a blank canvas."
-    >
+    <Dialog open={open} onClose={onClose} title={title} subtitle={subtitle}>
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <button
           onClick={() => onPick(BLANK_TEMPLATE)}

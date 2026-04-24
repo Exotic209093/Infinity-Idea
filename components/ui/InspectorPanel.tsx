@@ -21,6 +21,9 @@ export function InspectorPanel({ editor, selectedShape }: Props) {
     if (t === CUSTOM_SHAPE_TYPES.titleBlock) return "Title Block";
     if (t === CUSTOM_SHAPE_TYPES.callout) return "Callout";
     if (t === CUSTOM_SHAPE_TYPES.checklist) return "Checklist";
+    if (t === CUSTOM_SHAPE_TYPES.table) return "Table";
+    if (t === CUSTOM_SHAPE_TYPES.quote) return "Quote";
+    if (t === CUSTOM_SHAPE_TYPES.kpiStat) return "KPI Stat";
     return t.charAt(0).toUpperCase() + t.slice(1);
   }, [selectedShape]);
 
@@ -170,6 +173,56 @@ function ShapeFields({
           }}
           multiline
         />
+      )}
+
+      {shape.type === CUSTOM_SHAPE_TYPES.table && (
+        <TextField
+          label="Rows (tab between cells, newline between rows)"
+          value={String(props.cells ?? "")}
+          onChange={(v) => update({ cells: v })}
+          multiline
+        />
+      )}
+
+      {shape.type === CUSTOM_SHAPE_TYPES.quote && (
+        <>
+          <TextField
+            label="Author"
+            value={String(props.author ?? "")}
+            onChange={(v) => update({ author: v })}
+          />
+          <TextField
+            label="Role"
+            value={String(props.role ?? "")}
+            onChange={(v) => update({ role: v })}
+          />
+        </>
+      )}
+
+      {shape.type === CUSTOM_SHAPE_TYPES.kpiStat && (
+        <>
+          <TextField
+            label="Value"
+            value={String(props.value ?? "")}
+            onChange={(v) => update({ value: v })}
+          />
+          <TextField
+            label="Delta"
+            value={String(props.delta ?? "")}
+            onChange={(v) => update({ delta: v })}
+            placeholder="e.g. + 18%"
+          />
+          <SelectField
+            label="Trend"
+            value={String(props.trend ?? "up")}
+            options={[
+              { label: "Up", value: "up" },
+              { label: "Flat", value: "flat" },
+              { label: "Down", value: "down" },
+            ]}
+            onChange={(v) => update({ trend: v })}
+          />
+        </>
       )}
 
       <div className="mt-2 border-t border-white/10 pt-3 text-[11px] uppercase tracking-wider text-white/40">

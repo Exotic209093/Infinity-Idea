@@ -43,6 +43,9 @@ export function CanvasEditor() {
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
   const [shapeCount, setShapeCount] = useState(0);
   const [templatesOpen, setTemplatesOpen] = useState(false);
+  const [templateTarget, setTemplateTarget] = useState<"current" | "new-page">(
+    "current",
+  );
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
   const [presentOpen, setPresentOpen] = useState(false);
   const [presentSnapshot, setPresentSnapshot] = useState<unknown>(null);
@@ -167,19 +170,46 @@ export function CanvasEditor() {
     (template: Template) => {
       if (!editor) return;
       setTemplatesOpen(false);
+      const asNewPage = templateTarget === "new-page";
+      if (asNewPage) {
+        editor.markHistoryStoppingPoint("add-page-from-template");
+        const pageCount = editor.getPages().length;
+        editor.createPage({ name: `Page ${pageCount + 1}` });
+        const pages = editor.getPages();
+        const newPage = pages[pages.length - 1];
+        if (newPage) editor.setCurrentPage(newPage.id);
+      }
       if (template.id === "blank") {
-        pushToast("Blank canvas ready", "success");
+        pushToast(
+          asNewPage ? "Blank page added" : "Blank canvas ready",
+          "success",
+        );
+        setTemplateTarget("current");
         return;
       }
       template.apply(editor);
-      // Centre the viewport on what we just added so the user can see the
-      // whole template without having to pan.
       const all = Array.from(editor.getCurrentPageShapeIds());
       if (all.length > 0) editor.zoomToFit({ animation: { duration: 400 } });
-      pushToast(`Applied template: ${template.name}`, "success");
+      pushToast(
+        asNewPage
+          ? `New page from ${template.name}`
+          : `Applied template: ${template.name}`,
+        "success",
+      );
+      setTemplateTarget("current");
     },
-    [editor, pushToast],
+    [editor, pushToast, templateTarget],
   );
+
+  const openTemplatesForCurrentPage = useCallback(() => {
+    setTemplateTarget("current");
+    setTemplatesOpen(true);
+  }, []);
+
+  const openTemplatesForNewPage = useCallback(() => {
+    setTemplateTarget("new-page");
+    setTemplatesOpen(true);
+  }, []);
 
   // Global keyboard shortcuts. We intentionally do nothing while the user is
   // typing in an input/textarea so we don't steal their keystrokes.
@@ -213,12 +243,12 @@ export function CanvasEditor() {
         setShortcutsOpen(true);
       } else if (!mod && !e.shiftKey && e.key.toLowerCase() === "t") {
         e.preventDefault();
-        setTemplatesOpen(true);
+        openTemplatesForCurrentPage();
       }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [onSave]);
+  }, [onSave, openTemplatesForCurrentPage]);
 
   /* ---------- toolbox handlers ---------- */
 
@@ -332,7 +362,7 @@ export function CanvasEditor() {
         onExportPdf={onExportPdf}
         onUndo={onUndo}
         onRedo={onRedo}
-        onOpenTemplates={() => setTemplatesOpen(true)}
+        onOpenTemplates={openTemplatesForCurrentPage}
         onOpenShortcuts={() => setShortcutsOpen(true)}
         onPresent={onPresent}
       />
@@ -345,12 +375,16 @@ export function CanvasEditor() {
 
       <InspectorPanel editor={editor} selectedShape={selected} />
 
-      <PagesBar editor={editor} />
+      <PagesBar
+        editor={editor}
+        onAddPageFromTemplate={openTemplatesForNewPage}
+      />
 
       <TemplatesDialog
         open={templatesOpen}
         onClose={() => setTemplatesOpen(false)}
         onPick={onPickTemplate}
+        mode={templateTarget}
       />
 
       <ShortcutsDialog

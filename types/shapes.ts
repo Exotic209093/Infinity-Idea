@@ -7,6 +7,9 @@ export const CUSTOM_SHAPE_TYPES = {
   titleBlock: "titleBlock",
   callout: "callout",
   checklist: "checklist",
+  table: "table",
+  quote: "quote",
+  kpiStat: "kpiStat",
 } as const;
 
 export type CustomShapeType =
