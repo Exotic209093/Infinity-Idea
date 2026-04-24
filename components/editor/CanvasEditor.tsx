@@ -2,7 +2,13 @@
 
 import dynamic from "next/dynamic";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import type { Editor, TLShape, TLShapeId } from "tldraw";
+import {
+  GeoShapeGeoStyle,
+  type Editor,
+  type TLComponents,
+  type TLShape,
+  type TLShapeId,
+} from "tldraw";
 import "tldraw/tldraw.css";
 
 import { customShapeUtils } from "./shapes/customShapes";
@@ -53,7 +59,7 @@ export function CanvasEditor() {
       }
     };
     sync();
-    const dispose = editor.store.listen(sync, { scope: "session", source: "user" });
+    const dispose = editor.store.listen(sync, { scope: "all" });
     return () => dispose();
   }, [editor]);
 
@@ -142,22 +148,14 @@ export function CanvasEditor() {
       if (toolId.startsWith("geo-")) {
         const geo = toolId.replace("geo-", "");
         editor.setCurrentTool("geo");
-        editor.setStyleForNextShapes(
-          {
-            id: "tldraw:geo",
-            type: "string",
-            defaultValue: "rectangle",
-          } as never,
-          geo,
-        );
-      } else if (toolId === "text") {
-        editor.setCurrentTool("text");
-      } else if (toolId === "arrow") {
-        editor.setCurrentTool("arrow");
-      } else if (toolId === "line") {
-        editor.setCurrentTool("line");
-      } else if (toolId === "draw") {
-        editor.setCurrentTool("draw");
+        editor.setStyleForNextShapes(GeoShapeGeoStyle, geo as never);
+      } else if (
+        toolId === "text" ||
+        toolId === "arrow" ||
+        toolId === "line" ||
+        toolId === "draw"
+      ) {
+        editor.setCurrentTool(toolId);
       }
     },
     [editor],
@@ -166,14 +164,31 @@ export function CanvasEditor() {
   const onInsertCustom = useCallback(
     (shapeType: string) => {
       if (!editor) return;
-      const center = editor.getViewportPageBounds().center;
+      const viewport = editor.getViewportPageBounds();
+      const existingBounds = editor
+        .getCurrentPageShapes()
+        .map((s) => editor.getShapePageBounds(s.id))
+        .filter((b): b is NonNullable<typeof b> => b !== undefined);
+      // Place new blocks in a vertical column just past the toolbox, avoiding
+      // overlap with anything already in that column.
+      const x = viewport.x + 320;
+      let y = viewport.y + 60;
+      for (let tries = 0; tries < 200; tries++) {
+        const tentative = { minX: x, minY: y, maxX: x + 240, maxY: y + 160 };
+        const overlaps = existingBounds.filter(
+          (b) =>
+            b.minX < tentative.maxX &&
+            b.maxX > tentative.minX &&
+            b.minY < tentative.maxY &&
+            b.maxY > tentative.minY,
+        );
+        if (overlaps.length === 0) break;
+        y = Math.max(...overlaps.map((b) => b.maxY)) + 24;
+      }
       const id = `shape:${Math.random().toString(36).slice(2, 10)}` as TLShapeId;
-      editor.createShape({
-        id,
-        type: shapeType,
-        x: center.x - 120,
-        y: center.y - 60,
-      });
+      editor.markHistoryStoppingPoint(`insert-${shapeType}`);
+      editor.createShape({ id, type: shapeType, x, y });
+      editor.setCurrentTool("select");
       editor.select(id);
     },
     [editor],
@@ -199,6 +214,19 @@ export function CanvasEditor() {
 
   const shapeUtils = useMemo(() => customShapeUtils, []);
 
+  const tldrawComponents = useMemo<TLComponents>(
+    () => ({
+      // We provide our own File/Export/Undo/Redo + logo in the top bar.
+      MenuPanel: null,
+      PageMenu: null,
+      ActionsMenu: null,
+      HelpMenu: null,
+      SharePanel: null,
+      DebugMenu: null,
+    }),
+    [],
+  );
+
   return (
     <div className="relative h-full w-full bg-canvas-wash">
       <div className="tldraw-wrapper absolute inset-0">
@@ -206,7 +234,7 @@ export function CanvasEditor() {
           shapeUtils={shapeUtils}
           onMount={handleMount}
           options={{ maxPages: 1 }}
-          hideUi={false}
+          components={tldrawComponents}
         />
       </div>
 
