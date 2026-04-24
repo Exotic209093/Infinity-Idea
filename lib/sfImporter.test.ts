@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   parseApexSource,
   parseDescribeJson,
+  parseFlowXml,
   parseObjectXml,
   parseMetadata,
   parseMetadataBatch,
@@ -374,6 +375,81 @@ describe("parseProfileXml", () => {
     expect(() =>
       parseProfileXml(`<?xml version="1.0"?><Profile></Profile>`),
     ).toThrow(/objectPermissions/);
+  });
+});
+
+describe("parseFlowXml", () => {
+  const EXAMPLE = `<?xml version="1.0"?>
+<Flow>
+  <label>Lead qualification</label>
+  <fullName>Lead_Qualification</fullName>
+  <start>
+    <object>Lead</object>
+    <triggerType>RecordAfterSave</triggerType>
+    <connector>
+      <targetReference>Decide_Score</targetReference>
+    </connector>
+  </start>
+  <decisions>
+    <name>Decide_Score</name>
+    <label>Score > 75?</label>
+    <connector>
+      <targetReference>Create_Opp</targetReference>
+    </connector>
+  </decisions>
+  <recordCreates>
+    <name>Create_Opp</name>
+    <label>Create Opportunity</label>
+    <object>Opportunity</object>
+    <connector>
+      <targetReference>Send_Email</targetReference>
+    </connector>
+  </recordCreates>
+  <actionCalls>
+    <name>Send_Email</name>
+    <label>Send welcome email</label>
+    <actionName>emailAlert</actionName>
+  </actionCalls>
+</Flow>`;
+
+  it("extracts label, fullName and every element type", () => {
+    const flow = parseFlowXml(EXAMPLE);
+    expect(flow.label).toBe("Lead qualification");
+    expect(flow.apiName).toBe("Lead_Qualification");
+    expect(flow.elements.map((e) => e.type)).toEqual([
+      "start",
+      "decision",
+      "createRecord",
+      "action",
+    ]);
+  });
+
+  it("preserves connector target references", () => {
+    const flow = parseFlowXml(EXAMPLE);
+    const start = flow.elements.find((e) => e.type === "start")!;
+    expect(start.connectors).toEqual(["Decide_Score"]);
+    const decide = flow.elements.find((e) => e.type === "decision")!;
+    expect(decide.connectors).toEqual(["Create_Opp"]);
+    const sendEmail = flow.elements.find((e) => e.type === "action")!;
+    expect(sendEmail.connectors).toEqual([]);
+  });
+
+  it("synthesises details for record ops when no description is given", () => {
+    const flow = parseFlowXml(EXAMPLE);
+    const create = flow.elements.find((e) => e.type === "createRecord")!;
+    expect(create.details).toBe("Object: Opportunity");
+  });
+
+  it("rejects XML whose root isn't <Flow>", () => {
+    expect(() =>
+      parseFlowXml(`<?xml version="1.0"?><NotAFlow/>`),
+    ).toThrow(/Flow/);
+  });
+
+  it("errors on empty flows", () => {
+    expect(() =>
+      parseFlowXml(`<?xml version="1.0"?><Flow></Flow>`),
+    ).toThrow(/elements/);
   });
 });
 

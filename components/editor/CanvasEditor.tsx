@@ -26,11 +26,13 @@ import { SpeakerNotesDialog } from "@/components/ui/SpeakerNotesDialog";
 import { ImportSObjectDialog } from "@/components/ui/ImportSObjectDialog";
 import { ImportApexDialog } from "@/components/ui/ImportApexDialog";
 import { ImportProfileDialog } from "@/components/ui/ImportProfileDialog";
+import { ImportFlowDialog } from "@/components/ui/ImportFlowDialog";
 import {
   toFieldsText,
   toMembersText,
   toPermRowsText,
   type ImportedApex,
+  type ImportedFlow,
   type ImportedProfile,
   type ImportedRelationship,
   type ImportedSObject,
@@ -73,6 +75,7 @@ export function CanvasEditor() {
   const [sfImportOpen, setSfImportOpen] = useState(false);
   const [apexImportOpen, setApexImportOpen] = useState(false);
   const [profileImportOpen, setProfileImportOpen] = useState(false);
+  const [flowImportOpen, setFlowImportOpen] = useState(false);
   const [presentOpen, setPresentOpen] = useState(false);
   const [presentSnapshot, setPresentSnapshot] = useState<unknown>(null);
   const [savedBlocksVersion, setSavedBlocksVersion] = useState(0);
@@ -520,6 +523,101 @@ export function CanvasEditor() {
     [editor, pushToast],
   );
 
+  const onImportFlow = useCallback(
+    (flow: ImportedFlow) => {
+      if (!editor) return;
+      const viewport = editor.getViewportPageBounds();
+      const cols = Math.min(4, flow.elements.length);
+      const cellW = 240;
+      const cellH = 120;
+      const gap = 40;
+      const originX =
+        viewport.center.x -
+        (cols * cellW + (cols - 1) * gap) / 2;
+      const originY = viewport.y + 80;
+
+      const nameToId = new Map<string, TLShapeId>();
+
+      editor.markHistoryStoppingPoint("import-flow");
+
+      // Title block with the flow name
+      const titleId = `shape:${Math.random().toString(36).slice(2, 10)}` as TLShapeId;
+      editor.createShape({
+        id: titleId,
+        type: CUSTOM_SHAPE_TYPES.titleBlock,
+        x: originX,
+        y: viewport.y + 20,
+        props: {
+          w: cols * cellW + (cols - 1) * gap,
+          h: 60,
+          label: flow.label,
+          subtitle: flow.apiName,
+        },
+      });
+
+      // Flow element cards
+      flow.elements.forEach((el, i) => {
+        const col = i % cols;
+        const row = Math.floor(i / cols);
+        const x = originX + col * (cellW + gap);
+        const y = originY + 40 + row * (cellH + gap);
+        const id = `shape:${Math.random().toString(36).slice(2, 10)}` as TLShapeId;
+        nameToId.set(el.name, id);
+        editor.createShape({
+          id,
+          type: CUSTOM_SHAPE_TYPES.flowElement,
+          x,
+          y,
+          props: {
+            w: cellW,
+            h: cellH,
+            label: el.label,
+            elementType: el.type,
+            details: el.details,
+          },
+        });
+      });
+
+      // Connectors — simple tldraw arrows between element centres.
+      for (const el of flow.elements) {
+        const fromId = nameToId.get(el.name);
+        if (!fromId) continue;
+        for (const targetName of el.connectors) {
+          const toId = nameToId.get(targetName);
+          if (!toId) continue;
+          const fromBounds = editor.getShapePageBounds(fromId);
+          const toBounds = editor.getShapePageBounds(toId);
+          if (!fromBounds || !toBounds) continue;
+          const arrowId = `shape:${Math.random().toString(36).slice(2, 10)}` as TLShapeId;
+          editor.createShape({
+            id: arrowId,
+            type: "arrow",
+            x: 0,
+            y: 0,
+            props: {
+              start: { x: fromBounds.center.x, y: fromBounds.center.y },
+              end: { x: toBounds.center.x, y: toBounds.center.y },
+              color: "grey",
+              size: "s",
+            },
+          });
+        }
+      }
+
+      editor.setCurrentTool("select");
+      editor.zoomToFit({ animation: { duration: 400 } });
+      const connectors = flow.elements.reduce(
+        (n, e) => n + e.connectors.length,
+        0,
+      );
+      pushToast(
+        `Imported ${flow.label} · ${flow.elements.length} elements · ${connectors} connectors`,
+        "success",
+      );
+    },
+    [editor, pushToast],
+  );
+
   const onInsertSavedBlock = useCallback(
     (block: SavedBlock) => {
       if (!editor) return;
@@ -589,6 +687,7 @@ export function CanvasEditor() {
         onImportSObject={() => setSfImportOpen(true)}
         onImportApex={() => setApexImportOpen(true)}
         onImportProfile={() => setProfileImportOpen(true)}
+        onImportFlow={() => setFlowImportOpen(true)}
       />
 
       <InspectorPanel
@@ -643,6 +742,12 @@ export function CanvasEditor() {
         open={profileImportOpen}
         onClose={() => setProfileImportOpen(false)}
         onInsert={onImportProfile}
+      />
+
+      <ImportFlowDialog
+        open={flowImportOpen}
+        onClose={() => setFlowImportOpen(false)}
+        onInsert={onImportFlow}
       />
 
       <ToastStack toasts={toasts} onDismiss={dismissToast} />

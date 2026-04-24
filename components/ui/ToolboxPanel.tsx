@@ -50,6 +50,7 @@ type Props = {
   onImportSObject: () => void;
   onImportApex: () => void;
   onImportProfile: () => void;
+  onImportFlow: () => void;
 };
 
 const shapeItems: Array<{ id: string; label: string; icon: React.ReactNode }> = [
@@ -111,6 +112,7 @@ export function ToolboxPanel({
   onImportSObject,
   onImportApex,
   onImportProfile,
+  onImportFlow,
 }: Props) {
   const [tab, setTab] = useState<Tab>("blocks");
   const [savedBlocks, setSavedBlocks] = useState<SavedBlock[]>([]);
@@ -257,6 +259,12 @@ export function ToolboxPanel({
                 title="Paste .profile XML"
                 label="Profile"
                 hint="Becomes a Permission Matrix"
+              />
+              <ImportButton
+                onClick={onImportFlow}
+                title="Paste .flow XML"
+                label="Flow"
+                hint="Becomes connected Flow Elements"
               />
             </div>
             {salesforceItems.map((b) => (

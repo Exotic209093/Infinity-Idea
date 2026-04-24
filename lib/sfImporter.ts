@@ -1,4 +1,4 @@
-import type { SFFieldType } from "@/types/shapes";
+import type { FlowElementType, SFFieldType } from "@/types/shapes";
 
 /*
  * Parsers that turn Salesforce metadata (DESCRIBE JSON or an .object XML
@@ -574,6 +574,126 @@ export function toPermRowsText(profile: ImportedProfile): string {
         } | ${r.del ? 1 : 0} | ${r.modifyAll ? 1 : 0}`,
     )
     .join("\n");
+}
+
+/* ─────────────────────────── Flow XML parser ─────────────────────────── */
+
+export type ImportedFlowElement = {
+  name: string; // internal Flow name (used to resolve connectors)
+  label: string; // user-facing label
+  type: FlowElementType;
+  details: string;
+  connectors: string[]; // names of downstream elements this one connects to
+};
+
+export type ImportedFlow = {
+  label: string;
+  apiName: string;
+  elements: ImportedFlowElement[];
+};
+
+// Maps Flow metadata tag names to our FlowElement types.
+const FLOW_TAG_MAP: Record<string, FlowElementType> = {
+  screens: "screen",
+  decisions: "decision",
+  assignments: "assignment",
+  recordCreates: "createRecord",
+  recordUpdates: "updateRecord",
+  recordDeletes: "deleteRecord",
+  recordLookups: "getRecords",
+  actionCalls: "action",
+  apexPluginCalls: "action",
+  loops: "loop",
+  subflows: "subflow",
+};
+
+function textOf(el: Element | null, tag: string): string {
+  return el?.getElementsByTagName(tag)[0]?.textContent?.trim() ?? "";
+}
+
+function collectConnectors(el: Element): string[] {
+  // Flow elements may have <connector>, <defaultConnector>, <faultConnector>,
+  // <noMoreValuesConnector>, <nextValueConnector>. Every <targetReference>
+  // inside any descendant is a downstream element.
+  const targets: string[] = [];
+  const refs = el.getElementsByTagName("targetReference");
+  for (let i = 0; i < refs.length; i++) {
+    const v = refs[i].textContent?.trim();
+    if (v) targets.push(v);
+  }
+  return Array.from(new Set(targets));
+}
+
+export function parseFlowXml(raw: string): ImportedFlow {
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(raw, "application/xml");
+  if (doc.querySelector("parsererror")) {
+    throw new Error("That doesn't look like valid XML.");
+  }
+  const root = doc.documentElement;
+  if (!/flow/i.test(root.tagName)) {
+    throw new Error("Root element should be <Flow>.");
+  }
+  const label =
+    textOf(root, "label") || textOf(root, "fullName") || "Flow";
+  const apiName =
+    textOf(root, "fullName") || label.replace(/[^A-Za-z0-9]+/g, "");
+
+  const elements: ImportedFlowElement[] = [];
+
+  // The <start> element is special — represented as a direct child.
+  const startEl = root.getElementsByTagName("start")[0];
+  if (startEl) {
+    const triggerType = textOf(startEl, "triggerType") || "";
+    const objectName = textOf(startEl, "object") || "";
+    const detailsParts: string[] = [];
+    if (triggerType) detailsParts.push(`Trigger: ${triggerType}`);
+    if (objectName) detailsParts.push(`Object: ${objectName}`);
+    elements.push({
+      name: "__start",
+      label: objectName ? `On ${objectName}` : "Start",
+      type: "start",
+      details: detailsParts.join(" · "),
+      connectors: collectConnectors(startEl),
+    });
+  }
+
+  // Walk every mapped tag.
+  for (const [tag, elType] of Object.entries(FLOW_TAG_MAP)) {
+    const nodes = Array.from(root.getElementsByTagName(tag));
+    // Filter to only direct children of root — nested ones inside other
+    // elements (e.g. rules inside decisions) shouldn't count.
+    for (const node of nodes) {
+      if (node.parentElement !== root) continue;
+      const name = textOf(node, "name") || textOf(node, "fullName");
+      const lab = textOf(node, "label") || name || tag;
+      // Description: prefer <description>, otherwise assemble from hints.
+      const description = textOf(node, "description");
+      const details =
+        description ||
+        (elType === "createRecord" || elType === "updateRecord" ||
+        elType === "deleteRecord" || elType === "getRecords"
+          ? `Object: ${textOf(node, "object") || "—"}`
+          : elType === "action"
+          ? `Action: ${textOf(node, "actionName") || textOf(node, "actionType") || "—"}`
+          : elType === "subflow"
+          ? `Flow: ${textOf(node, "flowName") || "—"}`
+          : "");
+      elements.push({
+        name,
+        label: lab,
+        type: elType,
+        details,
+        connectors: collectConnectors(node),
+      });
+    }
+  }
+
+  if (elements.length === 0) {
+    throw new Error("No Flow elements found in the XML.");
+  }
+
+  return { label, apiName, elements };
 }
 
 /* ─────────────────────────── Shape-friendly output ─────────────────────────── */
