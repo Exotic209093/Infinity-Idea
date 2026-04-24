@@ -216,6 +216,126 @@ export const TEMPLATES: Template[] = [
       }),
   },
   {
+    id: "sf-schema",
+    name: "Salesforce Schema",
+    description: "Classic Account → Contact → Opportunity with Lead.",
+    accent: "#00a1e0",
+    apply: (editor) =>
+      applyAt(editor, ({ x, y }) => {
+        editor.markHistoryStoppingPoint("apply-template-sf-schema");
+        editor.createShapes([
+          {
+            id: id(),
+            type: CUSTOM_SHAPE_TYPES.titleBlock,
+            x,
+            y,
+            props: {
+              w: 1200,
+              h: 160,
+              label: "Salesforce Schema",
+              subtitle: "Standard objects and their relationships",
+            },
+          },
+          {
+            id: id(),
+            type: CUSTOM_SHAPE_TYPES.sobject,
+            x,
+            y: y + 220,
+            props: {
+              w: 300,
+              h: 260,
+              label: "Account",
+              apiName: "Account",
+              sobjectType: "standard",
+              fields: [
+                "Id | id | pk",
+                "Name | text | req",
+                "AccountNumber | text | unq",
+                "Industry | picklist",
+                "Phone | phone",
+                "OwnerId | lookup | | User",
+              ].join("\n"),
+            },
+          },
+          {
+            id: id(),
+            type: CUSTOM_SHAPE_TYPES.sobject,
+            x: x + 340,
+            y: y + 220,
+            props: {
+              w: 300,
+              h: 260,
+              label: "Contact",
+              apiName: "Contact",
+              sobjectType: "standard",
+              fields: [
+                "Id | id | pk",
+                "FirstName | text",
+                "LastName | text | req",
+                "Email | email | unq",
+                "AccountId | lookup | | Account",
+                "Phone | phone",
+              ].join("\n"),
+            },
+          },
+          {
+            id: id(),
+            type: CUSTOM_SHAPE_TYPES.sobject,
+            x: x + 680,
+            y: y + 220,
+            props: {
+              w: 300,
+              h: 260,
+              label: "Opportunity",
+              apiName: "Opportunity",
+              sobjectType: "standard",
+              fields: [
+                "Id | id | pk",
+                "Name | text | req",
+                "Amount | currency",
+                "StageName | picklist | req",
+                "CloseDate | date | req",
+                "AccountId | lookup | | Account",
+              ].join("\n"),
+            },
+          },
+          {
+            id: id(),
+            type: CUSTOM_SHAPE_TYPES.sobject,
+            x: x + 1020,
+            y: y + 220,
+            props: {
+              w: 240,
+              h: 220,
+              label: "Lead",
+              apiName: "Lead",
+              sobjectType: "standard",
+              fields: [
+                "Id | id | pk",
+                "Company | text | req",
+                "Status | picklist | req",
+                "Email | email",
+                "OwnerId | lookup | | User",
+              ].join("\n"),
+            },
+          },
+          {
+            id: id(),
+            type: CUSTOM_SHAPE_TYPES.callout,
+            x,
+            y: y + 520,
+            props: {
+              w: 1260,
+              h: 80,
+              label:
+                "Tip: drag connector arrows between the lookup fields and the parent objects to show the relationships visually.",
+              tone: "info",
+            },
+          },
+        ]);
+      }),
+  },
+  {
     id: "onboarding",
     name: "Onboarding Guide",
     description: "Title, three process steps, and a callout.",

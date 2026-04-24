@@ -30,6 +30,7 @@ export function InspectorPanel({
     if (t === CUSTOM_SHAPE_TYPES.table) return "Table";
     if (t === CUSTOM_SHAPE_TYPES.quote) return "Quote";
     if (t === CUSTOM_SHAPE_TYPES.kpiStat) return "KPI Stat";
+    if (t === CUSTOM_SHAPE_TYPES.sobject) return "Salesforce Object";
     return t.charAt(0).toUpperCase() + t.slice(1);
   }, [selectedShape]);
 
@@ -238,6 +239,51 @@ function ShapeFields({
             ]}
             onChange={(v) => update({ trend: v })}
           />
+        </>
+      )}
+
+      {shape.type === CUSTOM_SHAPE_TYPES.sobject && (
+        <>
+          <TextField
+            label="API name"
+            value={String(props.apiName ?? "")}
+            onChange={(v) => update({ apiName: v })}
+            placeholder="e.g. Account, MyObject__c"
+          />
+          <SelectField
+            label="Object type"
+            value={String(props.sobjectType ?? "standard")}
+            options={[
+              { label: "Standard", value: "standard" },
+              { label: "Custom", value: "custom" },
+              { label: "External", value: "external" },
+              { label: "Platform event", value: "platform" },
+            ]}
+            onChange={(v) => update({ sobjectType: v })}
+          />
+          <TextField
+            label="Fields (one per line)"
+            value={String(props.fields ?? "")}
+            onChange={(v) => update({ fields: v })}
+            placeholder="Name | type | flags | refTo"
+            multiline
+          />
+          <div className="rounded-md border border-white/10 bg-white/[0.03] p-2 text-[11px] leading-snug text-white/55">
+            <div className="mb-1 font-semibold text-white/75">Format</div>
+            <code className="text-[10px] text-white/70">Name | type | flags | refTo</code>
+            <div className="mt-2 text-white/55">
+              Types: id, text, textarea, email, phone, url, number, currency,
+              percent, date, datetime, time, picklist, multipicklist, checkbox,
+              lookup, masterDetail, formula, autoNumber, rollup, geolocation.
+            </div>
+            <div className="mt-1 text-white/55">
+              Flags: <code className="text-white/70">req</code>,{" "}
+              <code className="text-white/70">unq</code>,{" "}
+              <code className="text-white/70">ext</code>,{" "}
+              <code className="text-white/70">pk</code>. refTo names another
+              SObject (lookup / master-detail).
+            </div>
+          </div>
         </>
       )}
 
