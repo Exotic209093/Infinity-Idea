@@ -406,6 +406,7 @@ export function CanvasEditor() {
       );
 
       // Place each SObject in the grid.
+      const objBoundsCache = new Map<string, { x: number; y: number; w: number; h: number }>();
       objects.forEach((obj, i) => {
         const col = i % cols;
         const row = Math.floor(i / cols);
@@ -414,6 +415,7 @@ export function CanvasEditor() {
         const id = `shape:${Math.random().toString(36).slice(2, 10)}` as TLShapeId;
         apiToId.set(obj.apiName, id);
         created.push(id);
+        objBoundsCache.set(obj.apiName, { x, y, w: 320, h: 300 });
         editor.createShape({
           id,
           type: CUSTOM_SHAPE_TYPES.sobject,
@@ -427,6 +429,35 @@ export function CanvasEditor() {
             sobjectType: obj.sobjectType,
             fields: toFieldsText(obj),
           },
+        });
+      });
+
+      // Drop any validation rules under the relevant SObject.
+      let totalRules = 0;
+      objects.forEach((obj) => {
+        if (!obj.validationRules || obj.validationRules.length === 0) return;
+        const objBounds = objBoundsCache.get(obj.apiName);
+        if (!objBounds) return;
+        obj.validationRules.forEach((rule, j) => {
+          const ruleId = `shape:${Math.random().toString(36).slice(2, 10)}` as TLShapeId;
+          totalRules++;
+          editor.createShape({
+            id: ruleId,
+            type: CUSTOM_SHAPE_TYPES.validationRule,
+            x: objBounds.x,
+            y: objBounds.y + objBounds.h + 24 + j * 240,
+            props: {
+              w: 320,
+              h: 220,
+              label: rule.label,
+              apiName: rule.apiName,
+              active: rule.active,
+              formula: rule.formula,
+              errorMessage: rule.errorMessage,
+              errorDisplayField: rule.errorDisplayField,
+            },
+          });
+          created.push(ruleId);
         });
       });
 
@@ -461,10 +492,11 @@ export function CanvasEditor() {
       if (created.length > 0) editor.select(...created);
       editor.zoomToFit({ animation: { duration: 400 } });
 
+      const ruleSummary = totalRules > 0 ? ` · ${totalRules} rule${totalRules === 1 ? "" : "s"}` : "";
       pushToast(
         objects.length === 1
-          ? `Imported ${objects[0].apiName}`
-          : `Imported ${objects.length} objects · ${rels.length} relationships`,
+          ? `Imported ${objects[0].apiName}${ruleSummary}`
+          : `Imported ${objects.length} objects · ${rels.length} relationships${ruleSummary}`,
         "success",
       );
     },

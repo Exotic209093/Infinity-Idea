@@ -517,6 +517,55 @@ describe("parseSoql", () => {
   });
 });
 
+describe(".object XML validation rules", () => {
+  it("extracts validation rules alongside fields", () => {
+    const xml = `<?xml version="1.0"?>
+<CustomObject>
+  <label>Booking</label>
+  <fields>
+    <fullName>Name</fullName>
+    <type>Text</type>
+    <required>true</required>
+  </fields>
+  <validationRules>
+    <fullName>Name_Is_Required</fullName>
+    <active>true</active>
+    <errorConditionFormula>ISBLANK(Name)</errorConditionFormula>
+    <errorMessage>Please enter a name</errorMessage>
+    <errorDisplayField>Name</errorDisplayField>
+  </validationRules>
+  <validationRules>
+    <fullName>Inactive_Rule</fullName>
+    <active>false</active>
+    <errorConditionFormula>FALSE</errorConditionFormula>
+    <errorMessage>Off</errorMessage>
+  </validationRules>
+</CustomObject>`;
+    const obj = parseObjectXml(xml);
+    expect(obj.validationRules).toHaveLength(2);
+    const r = obj.validationRules![0];
+    expect(r.apiName).toBe("Name_Is_Required");
+    expect(r.label).toBe("Name Is Required");
+    expect(r.active).toBe(true);
+    expect(r.formula).toBe("ISBLANK(Name)");
+    expect(r.errorDisplayField).toBe("Name");
+    expect(obj.validationRules![1].active).toBe(false);
+  });
+
+  it("leaves validationRules undefined when no rules present", () => {
+    const xml = `<?xml version="1.0"?>
+<CustomObject>
+  <label>X</label>
+  <fields>
+    <fullName>Name</fullName>
+    <type>Text</type>
+  </fields>
+</CustomObject>`;
+    const obj = parseObjectXml(xml);
+    expect(obj.validationRules).toBeUndefined();
+  });
+});
+
 describe("toFieldsText", () => {
   it("serialises to the shape's pipe format", () => {
     const text = toFieldsText({
@@ -531,6 +580,9 @@ describe("toFieldsText", () => {
           unique: true,
           externalId: false,
           primaryKey: true,
+          pii: false,
+          encrypted: false,
+          indexed: false,
           refTo: "",
         },
         {
@@ -540,6 +592,9 @@ describe("toFieldsText", () => {
           unique: false,
           externalId: false,
           primaryKey: false,
+          pii: false,
+          encrypted: false,
+          indexed: false,
           refTo: "User",
         },
       ],

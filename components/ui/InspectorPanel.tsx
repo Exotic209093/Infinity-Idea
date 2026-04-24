@@ -37,6 +37,8 @@ export function InspectorPanel({
     if (t === CUSTOM_SHAPE_TYPES.connectedApp) return "Connected App";
     if (t === CUSTOM_SHAPE_TYPES.relationshipLabel) return "Relationship";
     if (t === CUSTOM_SHAPE_TYPES.soqlQuery) return "SOQL Query";
+    if (t === CUSTOM_SHAPE_TYPES.validationRule) return "Validation Rule";
+    if (t === CUSTOM_SHAPE_TYPES.approvalProcess) return "Approval Process";
     return t.charAt(0).toUpperCase() + t.slice(1);
   }, [selectedShape]);
 
@@ -473,6 +475,90 @@ function ShapeFields({
             ]}
             onChange={(v) => update({ kind: v })}
           />
+        </>
+      )}
+
+      {shape.type === CUSTOM_SHAPE_TYPES.validationRule && (
+        <>
+          <TextField
+            label="API name"
+            value={String(props.apiName ?? "")}
+            onChange={(v) => update({ apiName: v })}
+          />
+          <SelectField
+            label="Active"
+            value={props.active ? "true" : "false"}
+            options={[
+              { label: "Active", value: "true" },
+              { label: "Inactive", value: "false" },
+            ]}
+            onChange={(v) => update({ active: v === "true" })}
+          />
+          <TextField
+            label="Formula"
+            value={String(props.formula ?? "")}
+            onChange={(v) => update({ formula: v })}
+            multiline
+          />
+          <TextField
+            label="Error message"
+            value={String(props.errorMessage ?? "")}
+            onChange={(v) => update({ errorMessage: v })}
+            multiline
+          />
+          <TextField
+            label="Error display field"
+            value={String(props.errorDisplayField ?? "")}
+            onChange={(v) => update({ errorDisplayField: v })}
+            placeholder="e.g. Name"
+          />
+        </>
+      )}
+
+      {shape.type === CUSTOM_SHAPE_TYPES.approvalProcess && (
+        <>
+          <TextField
+            label="API name"
+            value={String(props.apiName ?? "")}
+            onChange={(v) => update({ apiName: v })}
+          />
+          <TextField
+            label="Object"
+            value={String(props.objectName ?? "")}
+            onChange={(v) => update({ objectName: v })}
+            placeholder="e.g. Opportunity"
+          />
+          <SelectField
+            label="Active"
+            value={props.active ? "true" : "false"}
+            options={[
+              { label: "Active", value: "true" },
+              { label: "Inactive", value: "false" },
+            ]}
+            onChange={(v) => update({ active: v === "true" })}
+          />
+          <TextField
+            label="Entry criteria"
+            value={String(props.entryCriteria ?? "")}
+            onChange={(v) => update({ entryCriteria: v })}
+            multiline
+          />
+          <TextField
+            label="Steps (one per line)"
+            value={String(props.steps ?? "")}
+            onChange={(v) => update({ steps: v })}
+            placeholder="Step name | Approver | Criteria"
+            multiline
+          />
+          <HelpCard title="Step format">
+            <code className="text-[10px] text-white/70">
+              Step name | Approver | Criteria
+            </code>
+            <div className="mt-2 text-white/55">
+              Approver is shown next to the step number; criteria appears below
+              it in monospace.
+            </div>
+          </HelpCard>
         </>
       )}
 

@@ -17,6 +17,8 @@ export const CUSTOM_SHAPE_TYPES = {
   connectedApp: "connectedApp",
   relationshipLabel: "relationshipLabel",
   soqlQuery: "soqlQuery",
+  validationRule: "validationRule",
+  approvalProcess: "approvalProcess",
 } as const;
 
 /* ─────────────────────── Flow element metadata ─────────────────────── */

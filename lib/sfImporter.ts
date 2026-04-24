@@ -16,7 +16,19 @@ export type ImportedField = {
   unique: boolean;
   externalId: boolean;
   primaryKey: boolean;
+  pii: boolean;
+  encrypted: boolean;
+  indexed: boolean;
   refTo: string;
+};
+
+export type ImportedValidationRule = {
+  apiName: string;
+  label: string;
+  active: boolean;
+  formula: string;
+  errorMessage: string;
+  errorDisplayField: string;
 };
 
 export type ImportedSObject = {
@@ -24,6 +36,7 @@ export type ImportedSObject = {
   apiName: string;
   sobjectType: "standard" | "custom" | "external" | "platform";
   fields: ImportedField[];
+  validationRules?: ImportedValidationRule[];
 };
 
 /* ─────────────────────────── DESCRIBE JSON ─────────────────────────── */
@@ -134,6 +147,9 @@ export function parseDescribeJson(raw: string): ImportedSObject {
       unique: !!f.unique,
       externalId: !!f.externalId,
       primaryKey: (f.name ?? "").toLowerCase() === "id",
+      pii: false,
+      encrypted: (f.type ?? "").toLowerCase() === "encryptedstring",
+      indexed: false,
       refTo:
         f.referenceTo && f.referenceTo.length > 0 ? f.referenceTo[0] : "",
     })),
@@ -200,6 +216,10 @@ export function parseObjectXml(raw: string): ImportedSObject {
       unique: get("unique").toLowerCase() === "true",
       externalId: get("externalId").toLowerCase() === "true",
       primaryKey: false,
+      pii: false,
+      encrypted:
+        get("encrypted").toLowerCase() === "true" || rawType === "encryptedtext",
+      indexed: false,
       refTo: referenceTo,
     };
   });
@@ -211,6 +231,25 @@ export function parseObjectXml(raw: string): ImportedSObject {
     : "standard";
   // Give it the __c suffix if it looks custom but the name doesn't say so.
   if (sobjectType === "custom" && !/__c$/i.test(apiName)) apiName += "__c";
+
+  // Pull validation rules from <validationRules> entries inside the same
+  // CustomObject XML so importing a file gives you the rules alongside the
+  // SObject diagram.
+  const ruleNodes = Array.from(root.getElementsByTagName("validationRules"));
+  const validationRules: ImportedValidationRule[] = ruleNodes.map((node) => {
+    const get = (tag: string) =>
+      node.getElementsByTagName(tag)[0]?.textContent?.trim() ?? "";
+    const apiName = get("fullName");
+    const labelTxt = apiName.replace(/_/g, " ");
+    return {
+      apiName,
+      label: labelTxt,
+      active: get("active").toLowerCase() === "true",
+      formula: get("errorConditionFormula"),
+      errorMessage: get("errorMessage"),
+      errorDisplayField: get("errorDisplayField"),
+    };
+  });
 
   return {
     label: label || apiName,
@@ -225,10 +264,14 @@ export function parseObjectXml(raw: string): ImportedSObject {
         unique: true,
         externalId: false,
         primaryKey: true,
+        pii: false,
+        encrypted: false,
+        indexed: false,
         refTo: "",
       },
       ...fields,
     ],
+    validationRules: validationRules.length > 0 ? validationRules : undefined,
   };
 }
 
@@ -837,6 +880,9 @@ function fieldFlags(f: ImportedField): string {
   if (f.required) flags.push("req");
   if (f.unique) flags.push("unq");
   if (f.externalId) flags.push("ext");
+  if (f.pii) flags.push("pii");
+  if (f.encrypted) flags.push("enc");
+  if (f.indexed) flags.push("idx");
   return flags.join(",");
 }
 

@@ -37,6 +37,8 @@ import {
   Cloud,
   FileDown,
   FileCode2,
+  ShieldAlert,
+  CheckCheck,
 } from "lucide-react";
 import { CUSTOM_SHAPE_TYPES } from "@/types/shapes";
 
@@ -104,6 +106,8 @@ const salesforceItems: Array<{
   { type: CUSTOM_SHAPE_TYPES.connectedApp, label: "Connected App", hint: "Integration / OAuth app", icon: <Plug size={16} /> },
   { type: CUSTOM_SHAPE_TYPES.relationshipLabel, label: "Relationship", hint: "Cardinality arrow chip", icon: <Link2 size={16} /> },
   { type: CUSTOM_SHAPE_TYPES.soqlQuery, label: "SOQL Query", hint: "Highlighted query block", icon: <FileCode2 size={16} /> },
+  { type: CUSTOM_SHAPE_TYPES.validationRule, label: "Validation Rule", hint: "Formula + error message", icon: <ShieldAlert size={16} /> },
+  { type: CUSTOM_SHAPE_TYPES.approvalProcess, label: "Approval Process", hint: "Multi-step approval", icon: <CheckCheck size={16} /> },
 ];
 
 export function ToolboxPanel({
