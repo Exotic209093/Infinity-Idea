@@ -1,7 +1,14 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import type { Editor, TLPageId } from "tldraw";
+import {
+  getIndexAbove,
+  getIndexBelow,
+  getIndexBetween,
+  type Editor,
+  type IndexKey,
+  type TLPageId,
+} from "tldraw";
 import {
   ChevronLeft,
   ChevronRight,
@@ -10,19 +17,23 @@ import {
   Trash2,
   FileText,
   Sparkles,
+  StickyNote,
+  GripVertical,
 } from "lucide-react";
 
 type Props = {
   editor: Editor | null;
   onAddPageFromTemplate: () => void;
+  onEditNotes: () => void;
 };
 
-export function PagesBar({ editor, onAddPageFromTemplate }: Props) {
+export function PagesBar({ editor, onAddPageFromTemplate, onEditNotes }: Props) {
   const [, force] = useState(0);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [dragFrom, setDragFrom] = useState<number | null>(null);
+  const [dragOver, setDragOver] = useState<number | null>(null);
   const menuRef = useRef<HTMLDivElement>(null);
 
-  // Re-render on page list / current-page changes.
   useEffect(() => {
     if (!editor) return;
     const sync = () => force((n) => n + 1);
@@ -49,6 +60,8 @@ export function PagesBar({ editor, onAddPageFromTemplate }: Props) {
   const idx = pages.findIndex((p) => p.id === current.id);
   const hasPrev = idx > 0;
   const hasNext = idx < pages.length - 1;
+  const currentNotes =
+    ((current.meta as { notes?: string } | undefined)?.notes ?? "").trim();
 
   const go = (id: TLPageId) => {
     editor.setCurrentPage(id);
@@ -80,6 +93,21 @@ export function PagesBar({ editor, onAddPageFromTemplate }: Props) {
     setMenuOpen(false);
   };
 
+  const movePage = (from: number, to: number) => {
+    if (from === to) return;
+    const id = pages[from].id;
+    let index: IndexKey;
+    const below = from > to ? pages[to - 1] : pages[to];
+    const above = from > to ? pages[to] : pages[to + 1];
+    if (below && !above) index = getIndexAbove(below.index);
+    else if (!below && above) index = getIndexBelow(pages[0].index);
+    else if (below && above) index = getIndexBetween(below.index, above.index);
+    else return;
+    if (index === pages[from].index) return;
+    editor.markHistoryStoppingPoint("move-page");
+    editor.updatePage({ id, index });
+  };
+
   return (
     <div className="pointer-events-none absolute bottom-20 left-1/2 z-10 -translate-x-1/2">
       <div className="glass-strong pointer-events-auto flex items-center gap-1 rounded-2xl px-2 py-1.5 shadow-glass">
@@ -103,34 +131,88 @@ export function PagesBar({ editor, onAddPageFromTemplate }: Props) {
             <span className="text-white/45">
               {idx + 1} / {pages.length}
             </span>
+            {currentNotes && (
+              <StickyNote
+                size={11}
+                className="text-amber-300"
+                aria-label="Has notes"
+              />
+            )}
           </button>
 
           {menuOpen && (
             <div
               ref={menuRef}
-              className="glass-strong animate-fade-down absolute bottom-[calc(100%+8px)] left-1/2 z-30 w-64 -translate-x-1/2 overflow-hidden rounded-xl shadow-glass"
+              className="glass-strong animate-fade-down absolute bottom-[calc(100%+8px)] left-1/2 z-30 w-72 -translate-x-1/2 overflow-hidden rounded-xl shadow-glass"
             >
               <div className="max-h-60 overflow-y-auto border-b border-white/10 py-1">
-                {pages.map((p, i) => (
-                  <button
-                    key={p.id}
-                    onClick={() => go(p.id)}
-                    className={`flex w-full items-center gap-2 px-3 py-2 text-left text-sm ${
-                      p.id === current.id
-                        ? "bg-white/10 text-white"
-                        : "text-white/80 hover:bg-white/5"
-                    }`}
-                  >
-                    <span className="w-5 text-xs text-white/45">{i + 1}</span>
-                    <span className="flex-1 truncate font-medium">{p.name}</span>
-                    {p.id === current.id && (
-                      <span
-                        className="h-1.5 w-1.5 rounded-full"
-                        style={{ background: "#8b5cf6" }}
+                {pages.map((p, i) => {
+                  const isDragging = dragFrom === i;
+                  const isDragOver = dragOver === i && dragFrom !== null && dragFrom !== i;
+                  const hasNotes =
+                    ((p.meta as { notes?: string } | undefined)?.notes ?? "").trim() !== "";
+                  return (
+                    <div
+                      key={p.id}
+                      draggable
+                      onDragStart={(e) => {
+                        setDragFrom(i);
+                        e.dataTransfer.effectAllowed = "move";
+                      }}
+                      onDragOver={(e) => {
+                        e.preventDefault();
+                        setDragOver(i);
+                        e.dataTransfer.dropEffect = "move";
+                      }}
+                      onDragLeave={() => setDragOver((v) => (v === i ? null : v))}
+                      onDrop={(e) => {
+                        e.preventDefault();
+                        if (dragFrom !== null) movePage(dragFrom, i);
+                        setDragFrom(null);
+                        setDragOver(null);
+                      }}
+                      onDragEnd={() => {
+                        setDragFrom(null);
+                        setDragOver(null);
+                      }}
+                      className={[
+                        "flex w-full items-center gap-2 px-3 py-2 text-left text-sm transition",
+                        p.id === current.id
+                          ? "bg-white/10 text-white"
+                          : "text-white/80 hover:bg-white/5",
+                        isDragging ? "opacity-50" : "",
+                        isDragOver ? "shadow-[inset_0_2px_0_#8b5cf6]" : "",
+                      ].join(" ")}
+                    >
+                      <GripVertical
+                        size={12}
+                        className="cursor-grab text-white/35"
                       />
-                    )}
-                  </button>
-                ))}
+                      <button
+                        onClick={() => go(p.id)}
+                        className="flex flex-1 items-center gap-2 text-left"
+                      >
+                        <span className="w-5 text-xs text-white/45">{i + 1}</span>
+                        <span className="flex-1 truncate font-medium">
+                          {p.name}
+                        </span>
+                        {hasNotes && (
+                          <StickyNote
+                            size={11}
+                            className="text-amber-300"
+                            aria-label="Has notes"
+                          />
+                        )}
+                        {p.id === current.id && (
+                          <span
+                            className="h-1.5 w-1.5 rounded-full"
+                            style={{ background: "#8b5cf6" }}
+                          />
+                        )}
+                      </button>
+                    </div>
+                  );
+                })}
               </div>
               <div className="flex items-center gap-1 p-1">
                 <button
@@ -154,6 +236,16 @@ export function PagesBar({ editor, onAddPageFromTemplate }: Props) {
                 </button>
               </div>
               <div className="flex items-center gap-1 border-t border-white/10 p-1">
+                <button
+                  onClick={() => {
+                    setMenuOpen(false);
+                    onEditNotes();
+                  }}
+                  className="btn-ghost flex flex-1 items-center justify-center gap-1.5 rounded-md px-2 py-1.5 text-xs font-semibold"
+                  title="Edit speaker notes for this page"
+                >
+                  <StickyNote size={12} /> Notes
+                </button>
                 <button
                   onClick={() => {
                     renameCurrent();

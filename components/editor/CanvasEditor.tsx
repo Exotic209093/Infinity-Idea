@@ -22,6 +22,7 @@ import { TemplatesDialog } from "@/components/ui/TemplatesDialog";
 import { ShortcutsDialog } from "@/components/ui/ShortcutsDialog";
 import { PagesBar } from "@/components/ui/PagesBar";
 import { PresentMode } from "@/components/ui/PresentMode";
+import { SpeakerNotesDialog } from "@/components/ui/SpeakerNotesDialog";
 import { downloadSaveFile } from "@/lib/io/saveJson";
 import { loadSaveFileFromFile } from "@/lib/io/loadJson";
 import { exportPng, exportSvg } from "@/lib/io/exportImage";
@@ -48,6 +49,7 @@ export function CanvasEditor() {
     "current",
   );
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
+  const [notesOpen, setNotesOpen] = useState(false);
   const [presentOpen, setPresentOpen] = useState(false);
   const [presentSnapshot, setPresentSnapshot] = useState<unknown>(null);
   const nextToastId = useRef(1);
@@ -392,6 +394,7 @@ export function CanvasEditor() {
       <PagesBar
         editor={editor}
         onAddPageFromTemplate={openTemplatesForNewPage}
+        onEditNotes={() => setNotesOpen(true)}
       />
 
       <TemplatesDialog
@@ -410,6 +413,12 @@ export function CanvasEditor() {
         open={presentOpen}
         onClose={() => setPresentOpen(false)}
         snapshot={presentSnapshot}
+      />
+
+      <SpeakerNotesDialog
+        open={notesOpen}
+        onClose={() => setNotesOpen(false)}
+        editor={editor}
       />
 
       <ToastStack toasts={toasts} onDismiss={dismissToast} />

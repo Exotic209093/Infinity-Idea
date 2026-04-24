@@ -40,6 +40,16 @@ const GROUPS: Group[] = [
     ],
   },
   {
+    title: "Presenting",
+    items: [
+      { keys: "→ / Space", label: "Next page" },
+      { keys: "←", label: "Previous page" },
+      { keys: "F", label: "Fullscreen" },
+      { keys: "N", label: "Toggle notes" },
+      { keys: "Esc", label: "Exit presentation" },
+    ],
+  },
+  {
     title: "Tools",
     items: [
       { keys: "V", label: "Select" },

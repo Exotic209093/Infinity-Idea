@@ -9,6 +9,7 @@ import {
   X,
   Maximize2,
   Minimize2,
+  StickyNote,
 } from "lucide-react";
 import { customShapeUtils } from "@/components/editor/shapes/customShapes";
 
@@ -49,7 +50,9 @@ export function PresentMode({ open, onClose, snapshot }: Props) {
   const [pageIdx, setPageIdx] = useState(0);
   const [pageCount, setPageCount] = useState(1);
   const [pageName, setPageName] = useState("");
+  const [pageNotes, setPageNotes] = useState("");
   const [fullscreen, setFullscreen] = useState(false);
+  const [notesVisible, setNotesVisible] = useState(false);
 
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -83,6 +86,11 @@ export function PresentMode({ open, onClose, snapshot }: Props) {
     setPageIdx(Math.max(0, idx));
     setPageCount(pages.length);
     setPageName(current.name);
+    const notes =
+      ((current.meta as { notes?: string } | undefined)?.notes ?? "").trim();
+    setPageNotes(notes);
+    // Auto-show notes when entering a page that has them, auto-hide when not.
+    setNotesVisible(notes !== "");
   };
 
   const [fading, setFading] = useState(false);
@@ -118,6 +126,8 @@ export function PresentMode({ open, onClose, snapshot }: Props) {
         go(-1);
       } else if (e.key.toLowerCase() === "f") {
         toggleFullscreen();
+      } else if (e.key.toLowerCase() === "n") {
+        setNotesVisible((v) => !v);
       }
     };
     window.addEventListener("keydown", onKey);
@@ -173,6 +183,19 @@ export function PresentMode({ open, onClose, snapshot }: Props) {
           </span>
         </div>
         <div className="pointer-events-auto flex items-center gap-2">
+          {pageNotes && (
+            <button
+              onClick={() => setNotesVisible((v) => !v)}
+              className={[
+                "glass-strong flex h-9 items-center gap-2 rounded-xl px-3 text-sm transition",
+                notesVisible ? "btn-primary" : "btn-ghost",
+              ].join(" ")}
+              title="Toggle speaker notes (N)"
+            >
+              <StickyNote size={14} />
+              Notes
+            </button>
+          )}
           <button
             onClick={toggleFullscreen}
             className="glass-strong btn-ghost flex h-9 items-center gap-2 rounded-xl px-3 text-sm"
@@ -194,6 +217,19 @@ export function PresentMode({ open, onClose, snapshot }: Props) {
           </button>
         </div>
       </div>
+
+      {pageNotes && notesVisible && (
+        <div className="pointer-events-none absolute inset-x-0 bottom-24 z-10 flex justify-center px-6">
+          <div className="glass-strong animate-fade-up pointer-events-auto max-w-3xl rounded-2xl border border-amber-300/20 px-5 py-4 shadow-glass">
+            <div className="mb-1 flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wider text-amber-300/80">
+              <StickyNote size={12} /> Speaker notes
+            </div>
+            <p className="whitespace-pre-wrap text-sm leading-relaxed text-white/90">
+              {pageNotes}
+            </p>
+          </div>
+        </div>
+      )}
 
       <div className="pointer-events-none absolute inset-x-0 bottom-6 z-10 flex justify-center">
         <div className="glass-strong pointer-events-auto flex items-center gap-1 rounded-2xl px-2 py-1.5 shadow-glass">
