@@ -1,13 +1,15 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { FileImage, FileType, FileText } from "lucide-react";
+import { FileImage, FileType, FileText, Files } from "lucide-react";
 
 type Props = {
   onClose: () => void;
   onExportPng: () => void;
   onExportSvg: () => void;
   onExportPdf: () => void;
+  onExportPdfAll: () => void;
+  pageCount: number;
 };
 
 export function ExportMenu({
@@ -15,6 +17,8 @@ export function ExportMenu({
   onExportPng,
   onExportSvg,
   onExportPdf,
+  onExportPdfAll,
+  pageCount,
 }: Props) {
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -35,13 +39,24 @@ export function ExportMenu({
     >
       <MenuItem
         icon={<FileText size={14} />}
-        label="Export PDF"
+        label={pageCount > 1 ? "Export this page (PDF)" : "Export PDF"}
         hint=".pdf"
         onClick={() => {
           onExportPdf();
           onClose();
         }}
       />
+      {pageCount > 1 && (
+        <MenuItem
+          icon={<Files size={14} />}
+          label="Export all pages (PDF)"
+          hint={`${pageCount} pages`}
+          onClick={() => {
+            onExportPdfAll();
+            onClose();
+          }}
+        />
+      )}
       <MenuItem
         icon={<FileImage size={14} />}
         label="Export PNG"

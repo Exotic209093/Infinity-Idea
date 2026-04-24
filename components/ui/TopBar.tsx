@@ -22,6 +22,8 @@ type Props = {
   onExportPng: () => void;
   onExportSvg: () => void;
   onExportPdf: () => void;
+  onExportPdfAll: () => void;
+  pageCount: number;
   onUndo: () => void;
   onRedo: () => void;
   onOpenTemplates: () => void;
@@ -36,6 +38,8 @@ export function TopBar({
   onExportPng,
   onExportSvg,
   onExportPdf,
+  onExportPdfAll,
+  pageCount,
   onUndo,
   onRedo,
   onOpenTemplates,
@@ -101,6 +105,8 @@ export function TopBar({
               onExportPng={onExportPng}
               onExportSvg={onExportSvg}
               onExportPdf={onExportPdf}
+              onExportPdfAll={onExportPdfAll}
+              pageCount={pageCount}
             />
           )}
         </div>

@@ -25,7 +25,7 @@ import { PresentMode } from "@/components/ui/PresentMode";
 import { downloadSaveFile } from "@/lib/io/saveJson";
 import { loadSaveFileFromFile } from "@/lib/io/loadJson";
 import { exportPng, exportSvg } from "@/lib/io/exportImage";
-import { exportPdf } from "@/lib/io/exportPdf";
+import { exportPdf, exportPdfAllPages } from "@/lib/io/exportPdf";
 import type { Template } from "@/lib/templates";
 
 const Tldraw = dynamic(() => import("tldraw").then((m) => m.Tldraw), {
@@ -42,6 +42,7 @@ export function CanvasEditor() {
   const [selected, setSelected] = useState<TLShape | null>(null);
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
   const [shapeCount, setShapeCount] = useState(0);
+  const [pageCount, setPageCount] = useState(1);
   const [templatesOpen, setTemplatesOpen] = useState(false);
   const [templateTarget, setTemplateTarget] = useState<"current" | "new-page">(
     "current",
@@ -73,6 +74,7 @@ export function CanvasEditor() {
         setSelected(null);
       }
       setShapeCount(editor.getCurrentPageShapeIds().size);
+      setPageCount(editor.getPages().length);
     };
     sync();
     const dispose = editor.store.listen(sync, { scope: "all" });
@@ -148,6 +150,16 @@ export function CanvasEditor() {
     try {
       await exportPdf(editor);
       pushToast("PDF exported", "success");
+    } catch (err) {
+      pushToast(err instanceof Error ? err.message : "Export failed", "error");
+    }
+  }, [editor, pushToast]);
+
+  const onExportPdfAll = useCallback(async () => {
+    if (!editor) return;
+    try {
+      await exportPdfAllPages(editor);
+      pushToast("All pages exported", "success");
     } catch (err) {
       pushToast(err instanceof Error ? err.message : "Export failed", "error");
     }
@@ -360,6 +372,8 @@ export function CanvasEditor() {
         onExportPng={onExportPng}
         onExportSvg={onExportSvg}
         onExportPdf={onExportPdf}
+        onExportPdfAll={onExportPdfAll}
+        pageCount={pageCount}
         onUndo={onUndo}
         onRedo={onRedo}
         onOpenTemplates={openTemplatesForCurrentPage}
