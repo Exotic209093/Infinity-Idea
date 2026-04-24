@@ -3,6 +3,8 @@ import {
   parseDescribeJson,
   parseObjectXml,
   parseMetadata,
+  parseMetadataBatch,
+  relationshipsAmong,
   toFieldsText,
 } from "./sfImporter";
 
@@ -124,6 +126,113 @@ describe("parseMetadata auto-detect", () => {
   it("picks XML when input starts with <?xml", () => {
     const raw = `<?xml version="1.0"?><CustomObject><label>X</label><fields><fullName>N</fullName><type>Text</type></fields></CustomObject>`;
     expect(() => parseMetadata(raw)).not.toThrow();
+  });
+});
+
+describe("parseMetadataBatch", () => {
+  it("parses a JSON array of describes", () => {
+    const raw = JSON.stringify([
+      { name: "Account", fields: [{ name: "Id", type: "id" }] },
+      { name: "Contact", fields: [{ name: "LastName", type: "string" }] },
+    ]);
+    const objs = parseMetadataBatch(raw);
+    expect(objs).toHaveLength(2);
+    expect(objs.map((o) => o.apiName)).toEqual(["Account", "Contact"]);
+  });
+
+  it("parses a { sobjects: [...] } envelope", () => {
+    const raw = JSON.stringify({
+      sobjects: [
+        { name: "Account", fields: [{ name: "Id", type: "id" }] },
+        { name: "Contact", fields: [{ name: "Id", type: "id" }] },
+      ],
+    });
+    const objs = parseMetadataBatch(raw);
+    expect(objs).toHaveLength(2);
+  });
+
+  it("parses a single-object describe as a 1-element batch", () => {
+    const raw = JSON.stringify({
+      name: "Account",
+      fields: [{ name: "Id", type: "id" }],
+    });
+    const objs = parseMetadataBatch(raw);
+    expect(objs).toHaveLength(1);
+    expect(objs[0].apiName).toBe("Account");
+  });
+
+  it("parses an .object XML as a 1-element batch", () => {
+    const raw = `<?xml version="1.0"?><CustomObject><label>X</label><fields><fullName>Name</fullName><type>Text</type></fields></CustomObject>`;
+    const objs = parseMetadataBatch(raw);
+    expect(objs).toHaveLength(1);
+  });
+
+  it("errors on empty input", () => {
+    expect(() => parseMetadataBatch("   ")).toThrow(/paste/i);
+  });
+});
+
+describe("relationshipsAmong", () => {
+  it("links lookup fields to known targets only", () => {
+    const objs = parseMetadataBatch(
+      JSON.stringify({
+        sobjects: [
+          {
+            name: "Account",
+            fields: [{ name: "Id", type: "id" }],
+          },
+          {
+            name: "Contact",
+            fields: [
+              { name: "Id", type: "id" },
+              {
+                name: "AccountId",
+                type: "reference",
+                referenceTo: ["Account"],
+              },
+              {
+                name: "OwnerId",
+                type: "reference",
+                referenceTo: ["User"], // User not in batch — skip
+              },
+            ],
+          },
+        ],
+      }),
+    );
+    const rels = relationshipsAmong(objs);
+    expect(rels).toHaveLength(1);
+    expect(rels[0]).toMatchObject({
+      fromApi: "Contact",
+      fromField: "AccountId",
+      toApi: "Account",
+      kind: "lookup",
+    });
+  });
+
+  it("preserves master-detail kind", () => {
+    const objs = parseMetadataBatch(
+      JSON.stringify({
+        sobjects: [
+          { name: "Invoice__c", fields: [{ name: "Id", type: "id" }] },
+          {
+            name: "InvoiceLine__c",
+            fields: [
+              { name: "Id", type: "id" },
+              {
+                name: "Invoice__c",
+                type: "reference",
+                referenceTo: ["Invoice__c"],
+                cascadeDelete: true,
+              },
+            ],
+          },
+        ],
+      }),
+    );
+    const rels = relationshipsAmong(objs);
+    expect(rels).toHaveLength(1);
+    expect(rels[0].kind).toBe("masterDetail");
   });
 });
 

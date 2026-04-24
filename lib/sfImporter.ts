@@ -261,6 +261,99 @@ export function parseMetadata(
   return parseObjectXml(trimmed);
 }
 
+/* ─────────────────────────── Batch import ─────────────────────────── */
+
+type DescribeBatchEnvelope = {
+  sobjects?: DescribeSObjectJson[];
+  result?: { sobjects?: DescribeSObjectJson[] };
+  records?: DescribeSObjectJson[];
+};
+
+/**
+ * Parse metadata that may contain multiple SObjects. Accepts:
+ *   - a plain JSON array of describe objects
+ *   - `{ sobjects: [...] }` (CLI composite output)
+ *   - `{ result: { sobjects: [...] } }`
+ *   - a single describe JSON (returned as a 1-element array)
+ *   - a single .object XML (returned as a 1-element array)
+ */
+export function parseMetadataBatch(raw: string): ImportedSObject[] {
+  const trimmed = raw.trim();
+  if (!trimmed) throw new Error("Paste some metadata first.");
+
+  if (trimmed.startsWith("[")) {
+    let arr: unknown;
+    try {
+      arr = JSON.parse(trimmed);
+    } catch {
+      throw new Error("That looks like a JSON array but isn't valid JSON.");
+    }
+    if (!Array.isArray(arr)) throw new Error("Expected a JSON array.");
+    return arr.map((o) => parseDescribeJson(JSON.stringify(o)));
+  }
+
+  if (trimmed.startsWith("{")) {
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(trimmed);
+    } catch {
+      throw new Error("That doesn't look like valid JSON.");
+    }
+    const env = parsed as DescribeBatchEnvelope;
+    const list =
+      env.sobjects ?? env.result?.sobjects ?? env.records ?? undefined;
+    if (Array.isArray(list) && list.length > 0) {
+      return list.map((o) => parseDescribeJson(JSON.stringify(o)));
+    }
+    // Fall back to single-object describe
+    return [parseDescribeJson(trimmed)];
+  }
+
+  if (trimmed.startsWith("<?xml") || trimmed.startsWith("<")) {
+    return [parseObjectXml(trimmed)];
+  }
+
+  throw new Error("Could not recognise this as JSON or XML metadata.");
+}
+
+/**
+ * Given a batch of imported objects, return the relationship chips that
+ * should be drawn for every lookup / master-detail field that references
+ * another object in the same batch.
+ */
+export type ImportedRelationship = {
+  fromApi: string;
+  fromField: string;
+  toApi: string;
+  kind: "lookup" | "masterDetail";
+  cardinality: "1:N";
+};
+
+export function relationshipsAmong(
+  objects: ImportedSObject[],
+): ImportedRelationship[] {
+  const apiNames = new Set(objects.map((o) => o.apiName));
+  const rels: ImportedRelationship[] = [];
+  for (const obj of objects) {
+    for (const f of obj.fields) {
+      if (
+        (f.type === "lookup" || f.type === "masterDetail") &&
+        f.refTo &&
+        apiNames.has(f.refTo)
+      ) {
+        rels.push({
+          fromApi: obj.apiName,
+          fromField: f.name,
+          toApi: f.refTo,
+          kind: f.type,
+          cardinality: "1:N",
+        });
+      }
+    }
+  }
+  return rels;
+}
+
 /* ─────────────────────────── Shape-friendly output ─────────────────────────── */
 
 function fieldFlags(f: ImportedField): string {

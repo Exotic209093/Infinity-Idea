@@ -24,7 +24,11 @@ import { PagesBar } from "@/components/ui/PagesBar";
 import { PresentMode } from "@/components/ui/PresentMode";
 import { SpeakerNotesDialog } from "@/components/ui/SpeakerNotesDialog";
 import { ImportSObjectDialog } from "@/components/ui/ImportSObjectDialog";
-import { toFieldsText, type ImportedSObject } from "@/lib/sfImporter";
+import {
+  toFieldsText,
+  type ImportedRelationship,
+  type ImportedSObject,
+} from "@/lib/sfImporter";
 import { CUSTOM_SHAPE_TYPES } from "@/types/shapes";
 import {
   buildBlockFromSelection,
@@ -368,28 +372,87 @@ export function CanvasEditor() {
   }, [editor, pushToast]);
 
   const onImportSObject = useCallback(
-    (obj: ImportedSObject) => {
-      if (!editor) return;
+    (objects: ImportedSObject[], rels: ImportedRelationship[]) => {
+      if (!editor || objects.length === 0) return;
       const viewport = editor.getViewportPageBounds();
-      const id = `shape:${Math.random().toString(36).slice(2, 10)}` as TLShapeId;
-      editor.markHistoryStoppingPoint("import-sobject");
-      editor.createShape({
-        id,
-        type: CUSTOM_SHAPE_TYPES.sobject,
-        x: viewport.center.x - 160,
-        y: viewport.center.y - 140,
-        props: {
-          w: 320,
-          h: 280,
-          label: obj.label,
-          apiName: obj.apiName,
-          sobjectType: obj.sobjectType,
-          fields: toFieldsText(obj),
-        },
+      const cols = Math.min(3, objects.length);
+      const cellW = 340;
+      const cellH = 320;
+      const gap = 40;
+      const originX =
+        viewport.center.x -
+        (cols * cellW + (cols - 1) * gap) / 2;
+      const originY = viewport.y + 80;
+
+      const apiToId = new Map<string, TLShapeId>();
+      const created: TLShapeId[] = [];
+
+      editor.markHistoryStoppingPoint(
+        objects.length === 1 ? "import-sobject" : "import-sobjects",
+      );
+
+      // Place each SObject in the grid.
+      objects.forEach((obj, i) => {
+        const col = i % cols;
+        const row = Math.floor(i / cols);
+        const x = originX + col * (cellW + gap);
+        const y = originY + row * (cellH + gap);
+        const id = `shape:${Math.random().toString(36).slice(2, 10)}` as TLShapeId;
+        apiToId.set(obj.apiName, id);
+        created.push(id);
+        editor.createShape({
+          id,
+          type: CUSTOM_SHAPE_TYPES.sobject,
+          x,
+          y,
+          props: {
+            w: 320,
+            h: 300,
+            label: obj.label,
+            apiName: obj.apiName,
+            sobjectType: obj.sobjectType,
+            fields: toFieldsText(obj),
+          },
+        });
       });
+
+      // Drop a relationship chip centred between each referenced pair.
+      rels.forEach((r) => {
+        const fromId = apiToId.get(r.fromApi);
+        const toId = apiToId.get(r.toApi);
+        if (!fromId || !toId) return;
+        const fromBounds = editor.getShapePageBounds(fromId);
+        const toBounds = editor.getShapePageBounds(toId);
+        if (!fromBounds || !toBounds) return;
+        const cx = (fromBounds.center.x + toBounds.center.x) / 2 - 90;
+        const cy = (fromBounds.center.y + toBounds.center.y) / 2 - 26;
+        const chipId = `shape:${Math.random().toString(36).slice(2, 10)}` as TLShapeId;
+        editor.createShape({
+          id: chipId,
+          type: CUSTOM_SHAPE_TYPES.relationshipLabel,
+          x: cx,
+          y: cy,
+          props: {
+            w: 180,
+            h: 52,
+            label: `${r.fromApi} → ${r.toApi}`,
+            cardinality: r.cardinality,
+            kind: r.kind,
+          },
+        });
+        created.push(chipId);
+      });
+
       editor.setCurrentTool("select");
-      editor.select(id);
-      pushToast(`Imported ${obj.apiName}`, "success");
+      if (created.length > 0) editor.select(...created);
+      editor.zoomToFit({ animation: { duration: 400 } });
+
+      pushToast(
+        objects.length === 1
+          ? `Imported ${objects[0].apiName}`
+          : `Imported ${objects.length} objects · ${rels.length} relationships`,
+        "success",
+      );
     },
     [editor, pushToast],
   );
