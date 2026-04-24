@@ -24,8 +24,14 @@ import { PagesBar } from "@/components/ui/PagesBar";
 import { PresentMode } from "@/components/ui/PresentMode";
 import { SpeakerNotesDialog } from "@/components/ui/SpeakerNotesDialog";
 import { ImportSObjectDialog } from "@/components/ui/ImportSObjectDialog";
+import { ImportApexDialog } from "@/components/ui/ImportApexDialog";
+import { ImportProfileDialog } from "@/components/ui/ImportProfileDialog";
 import {
   toFieldsText,
+  toMembersText,
+  toPermRowsText,
+  type ImportedApex,
+  type ImportedProfile,
   type ImportedRelationship,
   type ImportedSObject,
 } from "@/lib/sfImporter";
@@ -65,6 +71,8 @@ export function CanvasEditor() {
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
   const [notesOpen, setNotesOpen] = useState(false);
   const [sfImportOpen, setSfImportOpen] = useState(false);
+  const [apexImportOpen, setApexImportOpen] = useState(false);
+  const [profileImportOpen, setProfileImportOpen] = useState(false);
   const [presentOpen, setPresentOpen] = useState(false);
   const [presentSnapshot, setPresentSnapshot] = useState<unknown>(null);
   const [savedBlocksVersion, setSavedBlocksVersion] = useState(0);
@@ -457,6 +465,61 @@ export function CanvasEditor() {
     [editor, pushToast],
   );
 
+  const onImportApex = useCallback(
+    (apex: ImportedApex) => {
+      if (!editor) return;
+      const viewport = editor.getViewportPageBounds();
+      const id = `shape:${Math.random().toString(36).slice(2, 10)}` as TLShapeId;
+      editor.markHistoryStoppingPoint("import-apex");
+      editor.createShape({
+        id,
+        type: CUSTOM_SHAPE_TYPES.apexClass,
+        x: viewport.center.x - 160,
+        y: viewport.center.y - 110,
+        props: {
+          w: 320,
+          h: 220,
+          label: apex.label,
+          apiName: apex.apiName,
+          classKind: apex.classKind,
+          visibility: apex.visibility,
+          sharing: apex.sharing,
+          members: toMembersText(apex),
+        },
+      });
+      editor.setCurrentTool("select");
+      editor.select(id);
+      pushToast(`Imported ${apex.apiName}`, "success");
+    },
+    [editor, pushToast],
+  );
+
+  const onImportProfile = useCallback(
+    (profile: ImportedProfile) => {
+      if (!editor) return;
+      const viewport = editor.getViewportPageBounds();
+      const id = `shape:${Math.random().toString(36).slice(2, 10)}` as TLShapeId;
+      editor.markHistoryStoppingPoint("import-profile");
+      editor.createShape({
+        id,
+        type: CUSTOM_SHAPE_TYPES.permissionMatrix,
+        x: viewport.center.x - 180,
+        y: viewport.center.y - 110,
+        props: {
+          w: 360,
+          h: 220,
+          label: "Object permissions",
+          profile: profile.label,
+          rows: toPermRowsText(profile),
+        },
+      });
+      editor.setCurrentTool("select");
+      editor.select(id);
+      pushToast(`Imported permissions for ${profile.label}`, "success");
+    },
+    [editor, pushToast],
+  );
+
   const onInsertSavedBlock = useCallback(
     (block: SavedBlock) => {
       if (!editor) return;
@@ -524,6 +587,8 @@ export function CanvasEditor() {
         onInsertSavedBlock={onInsertSavedBlock}
         savedBlocksVersion={savedBlocksVersion}
         onImportSObject={() => setSfImportOpen(true)}
+        onImportApex={() => setApexImportOpen(true)}
+        onImportProfile={() => setProfileImportOpen(true)}
       />
 
       <InspectorPanel
@@ -566,6 +631,18 @@ export function CanvasEditor() {
         open={sfImportOpen}
         onClose={() => setSfImportOpen(false)}
         onInsert={onImportSObject}
+      />
+
+      <ImportApexDialog
+        open={apexImportOpen}
+        onClose={() => setApexImportOpen(false)}
+        onInsert={onImportApex}
+      />
+
+      <ImportProfileDialog
+        open={profileImportOpen}
+        onClose={() => setProfileImportOpen(false)}
+        onInsert={onImportProfile}
       />
 
       <ToastStack toasts={toasts} onDismiss={dismissToast} />

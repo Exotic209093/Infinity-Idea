@@ -354,6 +354,228 @@ export function relationshipsAmong(
   return rels;
 }
 
+/* ─────────────────────────── Apex source parser ─────────────────────────── */
+
+export type ImportedApexMember = {
+  signature: string;
+  modifiers: string[];
+};
+
+export type ImportedApex = {
+  label: string;
+  apiName: string;
+  classKind: "class" | "trigger" | "interface" | "enum" | "test";
+  visibility: "public" | "global" | "private";
+  sharing: "with" | "without" | "inherited" | "none";
+  members: ImportedApexMember[];
+};
+
+const APEX_KIND_KEYWORDS = ["class", "interface", "enum", "trigger"] as const;
+
+function stripApexCommentsAndStrings(src: string): string {
+  // Remove block comments, line comments, and the contents of string literals
+  // so we can scan for signatures without the regex getting confused.
+  return src
+    .replace(/\/\*[\s\S]*?\*\//g, "")
+    .replace(/\/\/.*$/gm, "")
+    .replace(/'(\\.|[^'\\])*'/g, "''");
+}
+
+/**
+ * Parse an Apex .cls / .trigger source string into metadata the ApexClass
+ * shape can render. Regex-based — good enough for documentation snapshots,
+ * not a full Apex parser.
+ */
+export function parseApexSource(raw: string): ImportedApex {
+  const src = stripApexCommentsAndStrings(raw);
+  if (!src.trim()) throw new Error("Paste some Apex source first.");
+
+  // Class header: skip any annotations, then visibility, sharing keyword
+  // (as a unit "with sharing" / "without sharing" / "inherited sharing"),
+  // optional virtual/abstract, then kind and name.
+  const headerRe =
+    /(?:@\w[\w.]*(?:\([^)]*\))?\s+)*(?:(global|public|private)\s+)?(?:(with|without|inherited)\s+sharing\s+)?(?:(virtual|abstract)\s+)?(class|interface|enum|trigger)\s+([A-Za-z_]\w*)/i;
+  const m = src.match(headerRe);
+  if (!m) {
+    throw new Error(
+      "Could not find a class/trigger/interface/enum declaration.",
+    );
+  }
+
+  const visibilityRaw = (m[1] ?? "public").toLowerCase();
+  const sharingKeyword = (m[2] ?? "").toLowerCase();
+  const kindRaw = m[4].toLowerCase() as (typeof APEX_KIND_KEYWORDS)[number];
+  const name = m[5];
+
+  const visibility: ImportedApex["visibility"] =
+    visibilityRaw === "global"
+      ? "global"
+      : visibilityRaw === "private"
+      ? "private"
+      : "public";
+  const sharing: ImportedApex["sharing"] =
+    sharingKeyword === "with"
+      ? "with"
+      : sharingKeyword === "without"
+      ? "without"
+      : sharingKeyword === "inherited"
+      ? "inherited"
+      : "none";
+
+  // Detect test classes by the presence of @isTest or @IsTest annotations
+  // within the first 200 characters of the original source.
+  const head = raw.slice(0, Math.min(400, raw.length));
+  const isTest = /@\s*is\s*test/i.test(head);
+  const classKind: ImportedApex["classKind"] = isTest && kindRaw === "class" ? "test" : kindRaw;
+
+  // Grab the method signatures at nesting depth 1 inside the class body.
+  const members = extractApexMembers(src);
+
+  return {
+    label: name,
+    apiName: name,
+    classKind,
+    visibility,
+    sharing,
+    members,
+  };
+}
+
+function extractApexMembers(src: string): ImportedApexMember[] {
+  // Skip past the class header brace.
+  const openIdx = src.indexOf("{");
+  if (openIdx === -1) return [];
+  const body = src.slice(openIdx + 1);
+
+  const members: ImportedApexMember[] = [];
+  let depth = 0;
+  let start = 0;
+  for (let i = 0; i < body.length; i++) {
+    const ch = body[i];
+    if (ch === "{") {
+      if (depth === 0) {
+        // Everything from start..i is the member signature (ended with `{`)
+        const sigRaw = body.slice(start, i).trim();
+        if (sigRaw) {
+          const mem = parseApexMemberSignature(sigRaw);
+          if (mem) members.push(mem);
+        }
+      }
+      depth++;
+    } else if (ch === "}") {
+      depth--;
+      if (depth === 0) {
+        start = i + 1;
+      }
+    } else if (ch === ";" && depth === 0) {
+      // Interface / abstract method declaration (no body)
+      const sigRaw = body.slice(start, i).trim();
+      if (sigRaw) {
+        const mem = parseApexMemberSignature(sigRaw);
+        if (mem) members.push(mem);
+      }
+      start = i + 1;
+    }
+  }
+  return members;
+}
+
+const METHOD_RE =
+  /(?:@[\w.]+(?:\([^)]*\))?\s*)*((?:\b(?:global|public|private|protected|static|virtual|abstract|override|final|webservice|testmethod)\s+)+)?([A-Za-z_][\w<>,\s.[\]]*?)?\s+([A-Za-z_][\w]*)\s*\(([^)]*)\)\s*$/;
+
+function parseApexMemberSignature(raw: string): ImportedApexMember | null {
+  // Normalise whitespace to a single line so the regex can anchor on $.
+  const flat = raw.replace(/\s+/g, " ").trim();
+  const m = flat.match(METHOD_RE);
+  if (!m) return null;
+  const modifiersRaw = (m[1] ?? "").trim();
+  const returnType = (m[2] ?? "").trim();
+  const methodName = m[3];
+  const argsRaw = (m[4] ?? "").trim();
+
+  // A field declaration would have a semicolon; we only keep method-like.
+  // Constructors have no return type — that's fine, return "" below.
+  const modifiers = modifiersRaw
+    .split(/\s+/)
+    .map((w) => w.toLowerCase())
+    .filter(Boolean);
+
+  const signature = returnType
+    ? `${methodName}(${argsRaw}): ${returnType}`
+    : `${methodName}(${argsRaw})`;
+  return { signature, modifiers };
+}
+
+/**
+ * Serialise to the pipe format the ApexClass block expects in its `members`
+ * prop: `name(args): Return | modifier1, modifier2`
+ */
+export function toMembersText(apex: ImportedApex): string {
+  return apex.members
+    .map((m) => {
+      const mods = m.modifiers.join(", ");
+      return mods ? `${m.signature} | ${mods}` : m.signature;
+    })
+    .join("\n");
+}
+
+/* ─────────────────────────── Profile XML parser ─────────────────────────── */
+
+export type ImportedPermRow = {
+  object: string;
+  create: boolean;
+  read: boolean;
+  update: boolean;
+  del: boolean;
+  modifyAll: boolean;
+};
+
+export type ImportedProfile = {
+  label: string;
+  rows: ImportedPermRow[];
+};
+
+export function parseProfileXml(raw: string): ImportedProfile {
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(raw, "application/xml");
+  if (doc.querySelector("parsererror")) {
+    throw new Error("That doesn't look like valid XML.");
+  }
+  const root = doc.documentElement;
+  const label =
+    root.getElementsByTagName("fullName")[0]?.textContent?.trim() ||
+    root.getElementsByTagName("label")[0]?.textContent?.trim() ||
+    "Profile";
+  const nodes = Array.from(root.getElementsByTagName("objectPermissions"));
+  if (nodes.length === 0) {
+    throw new Error("No <objectPermissions> entries found in the XML.");
+  }
+  const rows = nodes.map<ImportedPermRow>((node) => {
+    const get = (tag: string) =>
+      node.getElementsByTagName(tag)[0]?.textContent?.trim().toLowerCase() ?? "";
+    return {
+      object: node.getElementsByTagName("object")[0]?.textContent?.trim() ?? "",
+      create: get("allowCreate") === "true",
+      read: get("allowRead") === "true",
+      update: get("allowEdit") === "true",
+      del: get("allowDelete") === "true",
+      modifyAll: get("modifyAllRecords") === "true",
+    };
+  });
+  return { label, rows };
+}
+
+export function toPermRowsText(profile: ImportedProfile): string {
+  return profile.rows
+    .map(
+      (r) =>
+        `${r.object} | ${r.create ? 1 : 0} | ${r.read ? 1 : 0} | ${
+          r.update ? 1 : 0
+        } | ${r.del ? 1 : 0} | ${r.modifyAll ? 1 : 0}`,
+    )
+    .join("\n");
+}
+
 /* ─────────────────────────── Shape-friendly output ─────────────────────────── */
 
 function fieldFlags(f: ImportedField): string {

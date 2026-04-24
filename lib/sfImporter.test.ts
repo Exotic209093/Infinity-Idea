@@ -1,11 +1,15 @@
 import { describe, expect, it } from "vitest";
 import {
+  parseApexSource,
   parseDescribeJson,
   parseObjectXml,
   parseMetadata,
   parseMetadataBatch,
+  parseProfileXml,
   relationshipsAmong,
   toFieldsText,
+  toMembersText,
+  toPermRowsText,
 } from "./sfImporter";
 
 describe("parseDescribeJson", () => {
@@ -233,6 +237,143 @@ describe("relationshipsAmong", () => {
     const rels = relationshipsAmong(objs);
     expect(rels).toHaveLength(1);
     expect(rels[0].kind).toBe("masterDetail");
+  });
+});
+
+describe("parseApexSource", () => {
+  it("parses a with-sharing public class with methods", () => {
+    const src = `public with sharing class AccountService {
+      public static Id createAccount(Account a) {
+        insert a;
+        return a.Id;
+      }
+      public void linkContact(Id accountId, Id contactId) {
+      }
+      private Boolean sendWelcome(Id cId) {
+        return true;
+      }
+    }`;
+    const apex = parseApexSource(src);
+    expect(apex.apiName).toBe("AccountService");
+    expect(apex.classKind).toBe("class");
+    expect(apex.visibility).toBe("public");
+    expect(apex.sharing).toBe("with");
+    expect(apex.members).toHaveLength(3);
+    expect(apex.members[0].signature).toBe("createAccount(Account a): Id");
+    expect(apex.members[0].modifiers).toContain("public");
+    expect(apex.members[0].modifiers).toContain("static");
+  });
+
+  it("handles without sharing and global visibility", () => {
+    const src = `global without sharing class Api {
+      global static String ping() { return 'ok'; }
+    }`;
+    const apex = parseApexSource(src);
+    expect(apex.visibility).toBe("global");
+    expect(apex.sharing).toBe("without");
+  });
+
+  it("detects @isTest as test kind", () => {
+    const src = `@isTest
+private class AccountServiceTest {
+  static testMethod void t() { }
+}`;
+    const apex = parseApexSource(src);
+    expect(apex.classKind).toBe("test");
+  });
+
+  it("handles interfaces without bodies", () => {
+    const src = `public interface Notifier {
+      void notify(String msg);
+      Boolean isReady();
+    }`;
+    const apex = parseApexSource(src);
+    expect(apex.classKind).toBe("interface");
+    expect(apex.members).toHaveLength(2);
+    expect(apex.members[0].signature).toBe("notify(String msg): void");
+  });
+
+  it("errors when no class declaration is found", () => {
+    expect(() => parseApexSource("just some text")).toThrow(/declaration/i);
+  });
+});
+
+describe("toMembersText", () => {
+  it("serialises to the pipe member format", () => {
+    const text = toMembersText({
+      label: "X",
+      apiName: "X",
+      classKind: "class",
+      visibility: "public",
+      sharing: "with",
+      members: [
+        {
+          signature: "foo(String a): Integer",
+          modifiers: ["public", "static"],
+        },
+        {
+          signature: "bar()",
+          modifiers: [],
+        },
+      ],
+    });
+    expect(text).toBe(
+      ["foo(String a): Integer | public, static", "bar()"].join("\n"),
+    );
+  });
+});
+
+describe("parseProfileXml", () => {
+  it("extracts object permissions and label", () => {
+    const xml = `<?xml version="1.0"?>
+<Profile>
+  <fullName>Sales User</fullName>
+  <objectPermissions>
+    <allowCreate>true</allowCreate>
+    <allowRead>true</allowRead>
+    <allowEdit>true</allowEdit>
+    <allowDelete>false</allowDelete>
+    <modifyAllRecords>false</modifyAllRecords>
+    <object>Account</object>
+  </objectPermissions>
+  <objectPermissions>
+    <allowCreate>false</allowCreate>
+    <allowRead>true</allowRead>
+    <allowEdit>false</allowEdit>
+    <allowDelete>false</allowDelete>
+    <modifyAllRecords>false</modifyAllRecords>
+    <object>Lead</object>
+  </objectPermissions>
+</Profile>`;
+    const p = parseProfileXml(xml);
+    expect(p.label).toBe("Sales User");
+    expect(p.rows).toHaveLength(2);
+    const acc = p.rows.find((r) => r.object === "Account")!;
+    expect(acc.create).toBe(true);
+    expect(acc.del).toBe(false);
+  });
+
+  it("serialises rows to the matrix pipe format", () => {
+    const text = toPermRowsText({
+      label: "X",
+      rows: [
+        {
+          object: "Account",
+          create: true,
+          read: true,
+          update: true,
+          del: false,
+          modifyAll: false,
+        },
+      ],
+    });
+    expect(text).toBe("Account | 1 | 1 | 1 | 0 | 0");
+  });
+
+  it("throws when there are no objectPermissions", () => {
+    expect(() =>
+      parseProfileXml(`<?xml version="1.0"?><Profile></Profile>`),
+    ).toThrow(/objectPermissions/);
   });
 });
 

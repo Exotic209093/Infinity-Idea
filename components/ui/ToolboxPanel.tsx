@@ -48,6 +48,8 @@ type Props = {
   onInsertSavedBlock: (block: SavedBlock) => void;
   savedBlocksVersion: number; // bump to force a reload from storage
   onImportSObject: () => void;
+  onImportApex: () => void;
+  onImportProfile: () => void;
 };
 
 const shapeItems: Array<{ id: string; label: string; icon: React.ReactNode }> = [
@@ -107,6 +109,8 @@ export function ToolboxPanel({
   onInsertSavedBlock,
   savedBlocksVersion,
   onImportSObject,
+  onImportApex,
+  onImportProfile,
 }: Props) {
   const [tab, setTab] = useState<Tab>("blocks");
   const [savedBlocks, setSavedBlocks] = useState<SavedBlock[]>([]);
@@ -232,27 +236,29 @@ export function ToolboxPanel({
                 each.
               </span>
             </div>
-            <button
-              onClick={onImportSObject}
-              className="mb-1 flex items-center gap-3 rounded-lg border border-cyan-400/30 bg-cyan-400/10 p-3 text-left transition hover:border-cyan-400/50 hover:bg-cyan-400/15"
-              title="Paste DESCRIBE JSON or .object XML to generate a populated SObject block"
-            >
-              <div
-                className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-md"
-                style={{
-                  background:
-                    "linear-gradient(135deg, rgba(34,211,238,0.55), rgba(108,99,255,0.55))",
-                }}
-              >
-                <FileDown size={16} />
+            <div className="mb-1 flex flex-col gap-1.5">
+              <div className="text-[10px] font-semibold uppercase tracking-wider text-cyan-200/70">
+                Import metadata
               </div>
-              <div className="min-w-0 flex-1">
-                <div className="text-sm font-semibold">Import from metadata</div>
-                <div className="truncate text-xs text-white/60">
-                  DESCRIBE JSON · .object XML
-                </div>
-              </div>
-            </button>
+              <ImportButton
+                onClick={onImportSObject}
+                title="Paste DESCRIBE JSON or .object XML"
+                label="SObjects"
+                hint="DESCRIBE JSON · .object XML · batch"
+              />
+              <ImportButton
+                onClick={onImportApex}
+                title="Paste Apex .cls source"
+                label="Apex class"
+                hint="Extract name, visibility, methods"
+              />
+              <ImportButton
+                onClick={onImportProfile}
+                title="Paste .profile XML"
+                label="Profile"
+                hint="Becomes a Permission Matrix"
+              />
+            </div>
             {salesforceItems.map((b) => (
               <button
                 key={b.type}
@@ -321,6 +327,40 @@ export function ToolboxPanel({
         </label>
       </div>
     </div>
+  );
+}
+
+function ImportButton({
+  onClick,
+  title,
+  label,
+  hint,
+}: {
+  onClick: () => void;
+  title: string;
+  label: string;
+  hint: string;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      title={title}
+      className="flex items-center gap-3 rounded-lg border border-cyan-400/25 bg-cyan-400/5 p-2.5 text-left transition hover:border-cyan-400/50 hover:bg-cyan-400/10"
+    >
+      <div
+        className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-md"
+        style={{
+          background:
+            "linear-gradient(135deg, rgba(34,211,238,0.55), rgba(108,99,255,0.55))",
+        }}
+      >
+        <FileDown size={14} />
+      </div>
+      <div className="min-w-0 flex-1">
+        <div className="text-sm font-semibold">{label}</div>
+        <div className="truncate text-[10.5px] text-white/55">{hint}</div>
+      </div>
+    </button>
   );
 }
 
