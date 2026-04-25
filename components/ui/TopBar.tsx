@@ -133,6 +133,7 @@ export function TopBar({
         <Separator />
 
         <button
+          data-tour="search"
           className="btn-ghost flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-sm"
           onClick={onOpenPalette}
           title="Search blocks, templates, actions (Ctrl+K)"
@@ -147,6 +148,7 @@ export function TopBar({
         </button>
 
         <button
+          data-tour="templates"
           className="btn-ghost flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-sm"
           onClick={onOpenTemplates}
           title="Browse templates (T)"
@@ -156,6 +158,7 @@ export function TopBar({
         </button>
 
         <button
+          data-tour="present"
           className="btn-ghost flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-sm"
           onClick={onPresent}
           title="Enter presentation mode"

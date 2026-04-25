@@ -4,7 +4,7 @@ test.describe("Infinite Idea — smoke", () => {
   test("loads, inserts a template block, and saves a file", async ({
     page,
   }) => {
-    await page.goto("/");
+    await page.goto("/?welcome=0");
 
     // Canvas ready
     await expect(page.locator(".tl-container")).toBeVisible({ timeout: 30_000 });
@@ -30,7 +30,7 @@ test.describe("Infinite Idea — smoke", () => {
   test("opens the templates dialog via ? shortcut and applies one", async ({
     page,
   }) => {
-    await page.goto("/");
+    await page.goto("/?welcome=0");
     await expect(page.locator(".tl-container")).toBeVisible({ timeout: 30_000 });
 
     // Open templates dialog via the TopBar button
@@ -46,7 +46,7 @@ test.describe("Infinite Idea — smoke", () => {
   test("command palette opens with Ctrl+K and lists keyboard shortcuts", async ({
     page,
   }) => {
-    await page.goto("/");
+    await page.goto("/?welcome=0");
     await expect(page.locator(".tl-container")).toBeVisible({ timeout: 30_000 });
 
     await page.keyboard.press("Control+k");
@@ -63,7 +63,7 @@ test.describe("Infinite Idea — smoke", () => {
   });
 
   test("PagesBar adds a new page and the count increments", async ({ page }) => {
-    await page.goto("/");
+    await page.goto("/?welcome=0");
     await expect(page.locator(".tl-container")).toBeVisible({ timeout: 30_000 });
 
     await expect(page.getByTitle("Pages")).toContainText("1 / 1");
@@ -74,7 +74,7 @@ test.describe("Infinite Idea — smoke", () => {
   test("Present button enters presentation mode with snapshot content", async ({
     page,
   }) => {
-    await page.goto("/");
+    await page.goto("/?welcome=0");
     await expect(page.locator(".tl-container")).toBeVisible({ timeout: 30_000 });
 
     // Need at least one shape for presentation mode to open
@@ -91,7 +91,7 @@ test.describe("Infinite Idea — smoke", () => {
   });
 
   test("shows an error toast for an invalid save file", async ({ page }) => {
-    await page.goto("/");
+    await page.goto("/?welcome=0");
     await expect(page.locator(".tl-container")).toBeVisible({ timeout: 30_000 });
 
     await page.getByRole("button", { name: /^File/ }).click();

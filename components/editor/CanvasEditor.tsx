@@ -69,6 +69,8 @@ import {
   CommandPalette,
   type CommandItem,
 } from "@/components/ui/CommandPalette";
+import { WelcomeDialog } from "@/components/ui/WelcomeDialog";
+import { TourOverlay, type TourStep } from "@/components/ui/TourOverlay";
 import {
   toFieldsText,
   toMembersText,
@@ -88,6 +90,7 @@ import {
   saveBlocks,
   type SavedBlock,
 } from "@/lib/savedBlocks";
+import { loadRecentBlocks, pushRecentBlock } from "@/lib/recents";
 import { downloadSaveFile } from "@/lib/io/saveJson";
 import { loadSaveFileFromFile } from "@/lib/io/loadJson";
 import { exportPng, exportSvg } from "@/lib/io/exportImage";
@@ -122,9 +125,12 @@ export function CanvasEditor() {
   const [soqlImportOpen, setSoqlImportOpen] = useState(false);
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [toolboxCollapsed, setToolboxCollapsed] = useState(false);
+  const [welcomeOpen, setWelcomeOpen] = useState(false);
+  const [tourOpen, setTourOpen] = useState(false);
   const [presentOpen, setPresentOpen] = useState(false);
   const [presentSnapshot, setPresentSnapshot] = useState<unknown>(null);
   const [savedBlocksVersion, setSavedBlocksVersion] = useState(0);
+  const [recents, setRecents] = useState<string[]>(() => loadRecentBlocks());
   const nextToastId = useRef(1);
 
   const pushToast = useCallback((text: string, kind: ToastMessage["kind"] = "info") => {
@@ -160,6 +166,63 @@ export function CanvasEditor() {
     setEditor(ed);
     ed.user.updateUserPreferences({ colorScheme: "dark" });
   }, []);
+
+  // First-visit welcome. localStorage-gated so returning users don't get
+  // pestered. Honour ?welcome=1 in the URL to force-show for testing.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const force = new URLSearchParams(window.location.search).get("welcome");
+    if (force === "1") {
+      setWelcomeOpen(true);
+      return;
+    }
+    if (force === "0") return;
+    try {
+      const seen = window.localStorage.getItem("infinite-idea:welcomed");
+      if (!seen) setWelcomeOpen(true);
+    } catch {
+      /* private mode etc. — silently skip */
+    }
+  }, []);
+
+  const dismissWelcome = useCallback(() => {
+    setWelcomeOpen(false);
+    try {
+      window.localStorage.setItem("infinite-idea:welcomed", "1");
+    } catch {
+      /* ignore */
+    }
+  }, []);
+
+  const tourSteps = useMemo<TourStep[]>(
+    () => [
+      {
+        selector: '[data-tour="toolbox"]',
+        title: "Pick or search blocks",
+        body: "Drop a Title, Process Step, Salesforce Object — anything from the toolbox. Use the search field to filter across every tab at once.",
+        placement: "right",
+      },
+      {
+        selector: '[data-tour="search"]',
+        title: "Cmd+K opens everything",
+        body: "Insert any block, apply a template, run an export, jump to a page — all from one fuzzy-searchable list.",
+        placement: "bottom",
+      },
+      {
+        selector: '[data-tour="templates"]',
+        title: "Templates kick-start docs",
+        body: "Six ready-made canvases including a full Salesforce Architecture diagram. Pick one and tweak.",
+        placement: "bottom",
+      },
+      {
+        selector: '[data-tour="present"]',
+        title: "Present mode for clients",
+        body: "Each page becomes a slide. Speaker notes appear automatically when set, arrow keys navigate, F enters fullscreen.",
+        placement: "bottom",
+      },
+    ],
+    [],
+  );
 
   /* ---------- menu handlers ---------- */
 
@@ -396,6 +459,7 @@ export function CanvasEditor() {
       editor.createShape({ id, type: shapeType, x, y });
       editor.setCurrentTool("select");
       editor.select(id);
+      setRecents(pushRecentBlock(shapeType));
     },
     [editor],
   );
@@ -1043,6 +1107,7 @@ export function CanvasEditor() {
         onImportSoql={() => setSoqlImportOpen(true)}
         collapsed={toolboxCollapsed}
         onToggleCollapse={() => setToolboxCollapsed((v) => !v)}
+        recents={recents}
       />
 
       {selected && (
@@ -1117,6 +1182,19 @@ export function CanvasEditor() {
         open={paletteOpen}
         onClose={() => setPaletteOpen(false)}
         items={commandItems}
+      />
+
+      <WelcomeDialog
+        open={welcomeOpen}
+        onClose={dismissWelcome}
+        onBrowseTemplates={openTemplatesForCurrentPage}
+        onStartTour={() => setTourOpen(true)}
+      />
+
+      <TourOverlay
+        open={tourOpen}
+        steps={tourSteps}
+        onClose={() => setTourOpen(false)}
       />
 
       <ToastStack toasts={toasts} onDismiss={dismissToast} />

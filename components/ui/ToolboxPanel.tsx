@@ -42,6 +42,7 @@ import {
   Search,
   PanelLeftClose,
   PanelLeftOpen,
+  Clock,
 } from "lucide-react";
 import { CUSTOM_SHAPE_TYPES } from "@/types/shapes";
 
@@ -60,6 +61,7 @@ type Props = {
   onImportSoql: () => void;
   collapsed: boolean;
   onToggleCollapse: () => void;
+  recents: string[];
 };
 
 const shapeItems: Array<{ id: string; label: string; icon: React.ReactNode }> = [
@@ -128,6 +130,7 @@ export function ToolboxPanel({
   onImportSoql,
   collapsed,
   onToggleCollapse,
+  recents,
 }: Props) {
   const [tab, setTab] = useState<Tab>("blocks");
   const [savedBlocks, setSavedBlocks] = useState<SavedBlock[]>([]);
@@ -212,7 +215,7 @@ export function ToolboxPanel({
   }
 
   return (
-    <div className="glass-strong animate-slide-in-left pointer-events-auto absolute left-3 top-20 z-10 hidden w-64 flex-col overflow-hidden rounded-2xl shadow-glass md:flex"
+    <div data-tour="toolbox" className="glass-strong animate-slide-in-left pointer-events-auto absolute left-3 top-20 z-10 hidden w-64 flex-col overflow-hidden rounded-2xl shadow-glass md:flex"
          style={{ maxHeight: "calc(100vh - 110px)", animationDelay: "120ms" }}>
       <div className="flex items-center gap-1.5 border-b border-white/10 p-1.5">
         <div className="flex flex-1 items-center gap-2 rounded-lg bg-white/5 px-2 py-1.5">
@@ -242,6 +245,35 @@ export function ToolboxPanel({
           <PanelLeftClose size={14} />
         </button>
       </div>
+
+      {!isSearching && recents.length > 0 && (
+        <div className="border-b border-white/10 p-2">
+          <div className="mb-1.5 flex items-center gap-1.5 px-1 text-[10px] font-semibold uppercase tracking-wider text-white/45">
+            <Clock size={11} /> Recent
+          </div>
+          <div className="grid grid-cols-3 gap-1.5">
+            {recents.map((type) => {
+              const meta =
+                blockItems.find((b) => b.type === type) ??
+                salesforceItems.find((b) => b.type === type);
+              if (!meta) return null;
+              return (
+                <button
+                  key={type}
+                  onClick={() => onInsertCustom(type)}
+                  className="toolbox-block flex flex-col items-center gap-1.5 rounded-lg border border-white/5 bg-white/5 p-2 text-center hover:border-white/20 hover:bg-white/10"
+                  title={meta.label}
+                >
+                  <span className="text-white/85">{meta.icon}</span>
+                  <span className="line-clamp-1 text-[10px] font-semibold text-white/85">
+                    {meta.label}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {!isSearching && (
         <div className="scroll-thin flex overflow-x-auto border-b border-white/10 p-1">

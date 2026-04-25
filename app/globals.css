@@ -84,6 +84,13 @@ main {
   background: transparent !important;
 }
 
+.tour-scrim {
+  position: absolute;
+  background: rgba(8, 8, 16, 0.7);
+  backdrop-filter: blur(2px);
+  transition: all 200ms ease;
+}
+
 /* ─────────────────────────── Animations ─────────────────────────── */
 
 @keyframes fade-in {
