@@ -7,6 +7,7 @@ import {
   getIndexBetween,
   type Editor,
   type IndexKey,
+  type TLPage,
   type TLPageId,
 } from "tldraw";
 import {
@@ -28,16 +29,42 @@ type Props = {
   onEditNotes: () => void;
 };
 
+type PagesSnapshot = {
+  pages: readonly TLPage[];
+  currentId: TLPageId;
+};
+
+function pagesSnapshotEqual(a: PagesSnapshot, b: PagesSnapshot): boolean {
+  if (a.currentId !== b.currentId) return false;
+  if (a.pages === b.pages) return true;
+  if (a.pages.length !== b.pages.length) return false;
+  for (let i = 0; i < a.pages.length; i++) {
+    // Page records are immutable in tldraw — reference equality is sufficient
+    // and catches name / index / meta changes via record replacement.
+    if (a.pages[i] !== b.pages[i]) return false;
+  }
+  return true;
+}
+
 export function PagesBar({ editor, onAddPageFromTemplate, onEditNotes }: Props) {
-  const [, force] = useState(0);
+  const [snap, setSnap] = useState<PagesSnapshot | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
   const [dragFrom, setDragFrom] = useState<number | null>(null);
   const [dragOver, setDragOver] = useState<number | null>(null);
   const menuRef = useRef<HTMLDivElement>(null);
 
+  // Only re-render when pages or the current page id actually change. The
+  // listener fires on every store tick (including camera moves) so we dedup
+  // here to keep the bar idle during canvas interaction.
   useEffect(() => {
     if (!editor) return;
-    const sync = () => force((n) => n + 1);
+    const sync = () => {
+      const next: PagesSnapshot = {
+        pages: editor.getPages(),
+        currentId: editor.getCurrentPageId(),
+      };
+      setSnap((prev) => (prev && pagesSnapshotEqual(prev, next) ? prev : next));
+    };
     sync();
     const dispose = editor.store.listen(sync, { scope: "all" });
     return () => dispose();
@@ -54,10 +81,10 @@ export function PagesBar({ editor, onAddPageFromTemplate, onEditNotes }: Props) 
     return () => window.removeEventListener("mousedown", handler);
   }, [menuOpen]);
 
-  if (!editor) return null;
+  if (!editor || !snap) return null;
 
-  const pages = editor.getPages();
-  const current = editor.getCurrentPage();
+  const pages = snap.pages;
+  const current = pages.find((p) => p.id === snap.currentId) ?? pages[0];
   const idx = pages.findIndex((p) => p.id === current.id);
   const hasPrev = idx > 0;
   const hasNext = idx < pages.length - 1;

@@ -167,18 +167,23 @@ export function CanvasEditor() {
     setToasts((ts) => ts.filter((t) => t.id !== id));
   }, []);
 
+  // We listen at scope:"all" because tldraw mixes camera/instance state with
+  // shape state, but every setState below bails out when the value is
+  // reference-equal to the previous one — so panel re-renders only happen
+  // when the watched values actually change, not on every camera frame.
   useEffect(() => {
     if (!editor) return;
     const sync = () => {
       const ids = editor.getSelectedShapeIds();
-      if (ids.length === 1) {
-        const s = editor.getShape(ids[0] as TLShapeId);
-        setSelected(s ?? null);
-      } else {
-        setSelected(null);
-      }
-      setShapeCount(editor.getCurrentPageShapeIds().size);
-      setPageCount(editor.getPages().length);
+      const nextSelected =
+        ids.length === 1 ? (editor.getShape(ids[0] as TLShapeId) ?? null) : null;
+      setSelected((prev) => (prev === nextSelected ? prev : nextSelected));
+
+      const nextShapeCount = editor.getCurrentPageShapeIds().size;
+      setShapeCount((prev) => (prev === nextShapeCount ? prev : nextShapeCount));
+
+      const nextPageCount = editor.getPages().length;
+      setPageCount((prev) => (prev === nextPageCount ? prev : nextPageCount));
     };
     sync();
     const dispose = editor.store.listen(sync, { scope: "all" });
@@ -1149,78 +1154,105 @@ export function CanvasEditor() {
         onEditNotes={() => setNotesOpen(true)}
       />
 
-      <TemplatesDialog
-        open={templatesOpen}
-        onClose={() => setTemplatesOpen(false)}
-        onPick={onPickTemplate}
-        mode={templateTarget}
-      />
+      {/* Lazy-mount each dialog: when closed it doesn't even live in the React
+          tree, so it can't participate in re-renders triggered by canvas
+          interaction. Cuts background work for every closed dialog. */}
+      {templatesOpen && (
+        <TemplatesDialog
+          open={templatesOpen}
+          onClose={() => setTemplatesOpen(false)}
+          onPick={onPickTemplate}
+          mode={templateTarget}
+        />
+      )}
 
-      <ShortcutsDialog
-        open={shortcutsOpen}
-        onClose={() => setShortcutsOpen(false)}
-      />
+      {shortcutsOpen && (
+        <ShortcutsDialog
+          open={shortcutsOpen}
+          onClose={() => setShortcutsOpen(false)}
+        />
+      )}
 
-      <PresentMode
-        open={presentOpen}
-        onClose={() => setPresentOpen(false)}
-        snapshot={presentSnapshot}
-      />
+      {presentOpen && (
+        <PresentMode
+          open={presentOpen}
+          onClose={() => setPresentOpen(false)}
+          snapshot={presentSnapshot}
+        />
+      )}
 
-      <SpeakerNotesDialog
-        open={notesOpen}
-        onClose={() => setNotesOpen(false)}
-        editor={editor}
-      />
+      {notesOpen && (
+        <SpeakerNotesDialog
+          open={notesOpen}
+          onClose={() => setNotesOpen(false)}
+          editor={editor}
+        />
+      )}
 
-      <ImportSObjectDialog
-        open={sfImportOpen}
-        onClose={() => setSfImportOpen(false)}
-        onInsert={onImportSObject}
-      />
+      {sfImportOpen && (
+        <ImportSObjectDialog
+          open={sfImportOpen}
+          onClose={() => setSfImportOpen(false)}
+          onInsert={onImportSObject}
+        />
+      )}
 
-      <ImportApexDialog
-        open={apexImportOpen}
-        onClose={() => setApexImportOpen(false)}
-        onInsert={onImportApex}
-      />
+      {apexImportOpen && (
+        <ImportApexDialog
+          open={apexImportOpen}
+          onClose={() => setApexImportOpen(false)}
+          onInsert={onImportApex}
+        />
+      )}
 
-      <ImportProfileDialog
-        open={profileImportOpen}
-        onClose={() => setProfileImportOpen(false)}
-        onInsert={onImportProfile}
-      />
+      {profileImportOpen && (
+        <ImportProfileDialog
+          open={profileImportOpen}
+          onClose={() => setProfileImportOpen(false)}
+          onInsert={onImportProfile}
+        />
+      )}
 
-      <ImportFlowDialog
-        open={flowImportOpen}
-        onClose={() => setFlowImportOpen(false)}
-        onInsert={onImportFlow}
-      />
+      {flowImportOpen && (
+        <ImportFlowDialog
+          open={flowImportOpen}
+          onClose={() => setFlowImportOpen(false)}
+          onInsert={onImportFlow}
+        />
+      )}
 
-      <ImportSoqlDialog
-        open={soqlImportOpen}
-        onClose={() => setSoqlImportOpen(false)}
-        onInsert={onImportSoql}
-      />
+      {soqlImportOpen && (
+        <ImportSoqlDialog
+          open={soqlImportOpen}
+          onClose={() => setSoqlImportOpen(false)}
+          onInsert={onImportSoql}
+        />
+      )}
 
-      <CommandPalette
-        open={paletteOpen}
-        onClose={() => setPaletteOpen(false)}
-        items={commandItems}
-      />
+      {paletteOpen && (
+        <CommandPalette
+          open={paletteOpen}
+          onClose={() => setPaletteOpen(false)}
+          items={commandItems}
+        />
+      )}
 
-      <WelcomeDialog
-        open={welcomeOpen}
-        onClose={dismissWelcome}
-        onBrowseTemplates={openTemplatesForCurrentPage}
-        onStartTour={() => setTourOpen(true)}
-      />
+      {welcomeOpen && (
+        <WelcomeDialog
+          open={welcomeOpen}
+          onClose={dismissWelcome}
+          onBrowseTemplates={openTemplatesForCurrentPage}
+          onStartTour={() => setTourOpen(true)}
+        />
+      )}
 
-      <TourOverlay
-        open={tourOpen}
-        steps={tourSteps}
-        onClose={() => setTourOpen(false)}
-      />
+      {tourOpen && (
+        <TourOverlay
+          open={tourOpen}
+          steps={tourSteps}
+          onClose={() => setTourOpen(false)}
+        />
+      )}
 
       <ToastStack toasts={toasts} onDismiss={dismissToast} />
     </div>

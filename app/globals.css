@@ -29,14 +29,25 @@ main {
   height: 100%;
 }
 
+/* Solid translucent surfaces. We deliberately avoid backdrop-filter on the
+   always-visible HUD panels: the canvas under them is repainted continuously
+   during pan/zoom/drag, and re-blurring four panels per frame is what makes
+   the editor feel sluggish. Dialogs (modal, canvas frozen behind) keep blur. */
 .glass {
-  background: rgba(255, 255, 255, 0.06);
-  backdrop-filter: blur(14px) saturate(140%);
-  -webkit-backdrop-filter: blur(14px) saturate(140%);
+  background: rgba(20, 20, 32, 0.78);
   border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
 }
 
 .glass-strong {
+  background: rgba(17, 17, 27, 0.92);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+/* Opt-in glass with real backdrop blur — use only on modal surfaces where
+   the canvas behind is static. */
+.glass-blur {
   background: rgba(17, 17, 27, 0.55);
   backdrop-filter: blur(18px) saturate(160%);
   -webkit-backdrop-filter: blur(18px) saturate(160%);
