@@ -39,6 +39,9 @@ import {
   FileCode2,
   ShieldAlert,
   CheckCheck,
+  Search,
+  PanelLeftClose,
+  PanelLeftOpen,
 } from "lucide-react";
 import { CUSTOM_SHAPE_TYPES } from "@/types/shapes";
 
@@ -55,6 +58,8 @@ type Props = {
   onImportProfile: () => void;
   onImportFlow: () => void;
   onImportSoql: () => void;
+  collapsed: boolean;
+  onToggleCollapse: () => void;
 };
 
 const shapeItems: Array<{ id: string; label: string; icon: React.ReactNode }> = [
@@ -121,9 +126,12 @@ export function ToolboxPanel({
   onImportProfile,
   onImportFlow,
   onImportSoql,
+  collapsed,
+  onToggleCollapse,
 }: Props) {
   const [tab, setTab] = useState<Tab>("blocks");
   const [savedBlocks, setSavedBlocks] = useState<SavedBlock[]>([]);
+  const [search, setSearch] = useState("");
 
   useEffect(() => {
     setSavedBlocks(loadSavedBlocks());
@@ -135,34 +143,169 @@ export function ToolboxPanel({
     saveBlocks(next);
   };
 
+  const searchQuery = search.trim().toLowerCase();
+  const isSearching = searchQuery.length > 0;
+
+  type FlatItem = {
+    key: string;
+    label: string;
+    hint: string;
+    icon: React.ReactNode;
+    onClick: () => void;
+  };
+  const flatResults: FlatItem[] = isSearching
+    ? [
+        ...blockItems.map((b) => ({
+          key: `block-${b.type}`,
+          label: b.label,
+          hint: b.hint,
+          icon: b.icon,
+          onClick: () => onInsertCustom(b.type),
+        })),
+        ...salesforceItems.map((b) => ({
+          key: `sf-${b.type}`,
+          label: b.label,
+          hint: b.hint,
+          icon: b.icon,
+          onClick: () => onInsertCustom(b.type),
+        })),
+        ...shapeItems.map((s) => ({
+          key: `shape-${s.id}`,
+          label: s.label,
+          hint: "Tool",
+          icon: s.icon,
+          onClick: () => onSelectTool(s.id),
+        })),
+        ...diagramItems.map((s) => ({
+          key: `diagram-${s.id}`,
+          label: s.label,
+          hint: "Diagram tool",
+          icon: s.icon,
+          onClick: () => onSelectTool(s.id),
+        })),
+        ...savedBlocks.map((b) => ({
+          key: `saved-${b.id}`,
+          label: b.name,
+          hint: `${b.shapes.length} saved shape${b.shapes.length === 1 ? "" : "s"}`,
+          icon: <Bookmark size={16} />,
+          onClick: () => onInsertSavedBlock(b),
+        })),
+      ].filter(
+        (it) =>
+          it.label.toLowerCase().includes(searchQuery) ||
+          it.hint.toLowerCase().includes(searchQuery),
+      )
+    : [];
+
+  if (collapsed) {
+    return (
+      <div className="glass-strong pointer-events-auto absolute left-3 top-20 z-10 hidden flex-col items-center gap-2 rounded-2xl p-1 shadow-glass md:flex">
+        <button
+          onClick={onToggleCollapse}
+          className="btn-ghost flex h-9 w-9 items-center justify-center rounded-lg"
+          title="Show toolbox"
+        >
+          <PanelLeftOpen size={16} />
+        </button>
+      </div>
+    );
+  }
+
   return (
     <div className="glass-strong animate-slide-in-left pointer-events-auto absolute left-3 top-20 z-10 hidden w-64 flex-col overflow-hidden rounded-2xl shadow-glass md:flex"
          style={{ maxHeight: "calc(100vh - 110px)", animationDelay: "120ms" }}>
-      <div className="scroll-thin flex overflow-x-auto border-b border-white/10 p-1">
-        <TabButton active={tab === "shapes"} onClick={() => setTab("shapes")}>
-          Shapes
-        </TabButton>
-        <TabButton active={tab === "diagrams"} onClick={() => setTab("diagrams")}>
-          Diagrams
-        </TabButton>
-        <TabButton active={tab === "blocks"} onClick={() => setTab("blocks")}>
-          Blocks
-        </TabButton>
-        <TabButton
-          active={tab === "salesforce"}
-          onClick={() => setTab("salesforce")}
+      <div className="flex items-center gap-1.5 border-b border-white/10 p-1.5">
+        <div className="flex flex-1 items-center gap-2 rounded-lg bg-white/5 px-2 py-1.5">
+          <Search size={12} className="text-white/45" />
+          <input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search blocks, tools…"
+            className="flex-1 bg-transparent text-xs text-white outline-none placeholder:text-white/40"
+            spellCheck={false}
+          />
+          {search && (
+            <button
+              onClick={() => setSearch("")}
+              className="text-white/40 hover:text-white"
+              title="Clear search"
+            >
+              <XIcon size={12} />
+            </button>
+          )}
+        </div>
+        <button
+          onClick={onToggleCollapse}
+          className="btn-ghost flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-md"
+          title="Hide toolbox"
         >
-          <span className="flex items-center justify-center gap-1">
-            <Cloud size={10} /> SF
-          </span>
-        </TabButton>
-        <TabButton active={tab === "saved"} onClick={() => setTab("saved")}>
-          Saved
-        </TabButton>
+          <PanelLeftClose size={14} />
+        </button>
       </div>
 
+      {!isSearching && (
+        <div className="scroll-thin flex overflow-x-auto border-b border-white/10 p-1">
+          <TabButton active={tab === "shapes"} onClick={() => setTab("shapes")}>
+            Shapes
+          </TabButton>
+          <TabButton active={tab === "diagrams"} onClick={() => setTab("diagrams")}>
+            Diagrams
+          </TabButton>
+          <TabButton active={tab === "blocks"} onClick={() => setTab("blocks")}>
+            Blocks
+          </TabButton>
+          <TabButton
+            active={tab === "salesforce"}
+            onClick={() => setTab("salesforce")}
+          >
+            <span className="flex items-center justify-center gap-1">
+              <Cloud size={10} /> SF
+            </span>
+          </TabButton>
+          <TabButton active={tab === "saved"} onClick={() => setTab("saved")}>
+            Saved
+          </TabButton>
+        </div>
+      )}
+
       <div className="scroll-thin flex-1 overflow-y-auto p-2">
-        {tab === "shapes" && (
+        {isSearching && (
+          <div className="flex flex-col gap-1.5">
+            {flatResults.length === 0 ? (
+              <div className="px-1 py-6 text-center text-xs text-white/45">
+                No matches for &ldquo;{search}&rdquo;
+              </div>
+            ) : (
+              flatResults.map((it) => (
+                <button
+                  key={it.key}
+                  onClick={() => {
+                    it.onClick();
+                  }}
+                  className="toolbox-block group flex items-center gap-3 rounded-lg border border-white/5 bg-white/5 p-2.5 text-left hover:border-white/20 hover:bg-white/10"
+                >
+                  <div
+                    className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-md"
+                    style={{
+                      background:
+                        "linear-gradient(135deg, rgba(108,99,255,0.4), rgba(236,72,153,0.4))",
+                    }}
+                  >
+                    {it.icon}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="text-sm font-semibold">{it.label}</div>
+                    <div className="truncate text-[11px] text-white/55">
+                      {it.hint}
+                    </div>
+                  </div>
+                </button>
+              ))
+            )}
+          </div>
+        )}
+
+        {!isSearching && tab === "shapes" && (
           <div className="grid grid-cols-2 gap-2">
             {shapeItems.map((s) => (
               <ToolCard key={s.id} onClick={() => onSelectTool(s.id)}>
@@ -173,7 +316,7 @@ export function ToolboxPanel({
           </div>
         )}
 
-        {tab === "diagrams" && (
+        {!isSearching && tab === "diagrams" && (
           <div className="grid grid-cols-2 gap-2">
             {diagramItems.map((s) => (
               <ToolCard key={s.id} onClick={() => onSelectTool(s.id)}>
@@ -184,7 +327,7 @@ export function ToolboxPanel({
           </div>
         )}
 
-        {tab === "saved" && (
+        {!isSearching && tab === "saved" && (
           <div className="flex flex-col gap-1.5">
             {savedBlocks.length === 0 ? (
               <div className="px-1 py-4 text-center text-xs text-white/50">
@@ -237,7 +380,7 @@ export function ToolboxPanel({
           </div>
         )}
 
-        {tab === "salesforce" && (
+        {!isSearching && tab === "salesforce" && (
           <div className="flex flex-col gap-1.5">
             <div className="mb-1 flex items-center gap-2 rounded-md border border-cyan-400/20 bg-cyan-400/5 px-3 py-2 text-[11px] text-cyan-200/85">
               <Cloud size={14} className="flex-shrink-0" />
@@ -305,7 +448,7 @@ export function ToolboxPanel({
           </div>
         )}
 
-        {tab === "blocks" && (
+        {!isSearching && tab === "blocks" && (
           <div className="flex flex-col gap-1.5">
             {blockItems.map((b) => (
               <button

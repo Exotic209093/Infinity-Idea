@@ -9,7 +9,7 @@ import {
   Undo2,
   Redo2,
   LayoutTemplate,
-  Keyboard,
+  Search as SearchIcon,
   Play,
 } from "lucide-react";
 import { FileMenu } from "./FileMenu";
@@ -29,6 +29,7 @@ type Props = {
   onOpenTemplates: () => void;
   onOpenShortcuts: () => void;
   onPresent: () => void;
+  onOpenPalette: () => void;
 };
 
 export function TopBar({
@@ -45,12 +46,13 @@ export function TopBar({
   onOpenTemplates,
   onOpenShortcuts,
   onPresent,
+  onOpenPalette,
 }: Props) {
   const [fileOpen, setFileOpen] = useState(false);
   const [exportOpen, setExportOpen] = useState(false);
 
   return (
-    <div className="pointer-events-none absolute inset-x-0 top-0 z-20 flex justify-center p-3">
+    <div className="pointer-events-none absolute inset-x-0 top-0 z-20 flex justify-start p-3 pl-16">
       <div className="glass-strong animate-fade-down pointer-events-auto flex items-center gap-2 rounded-2xl px-3 py-2 shadow-glass">
         <div className="flex items-center gap-2 pr-3">
           <div
@@ -62,7 +64,7 @@ export function TopBar({
           >
             <Sparkles size={16} className="text-white" />
           </div>
-          <div className="text-sm font-semibold tracking-tight">
+          <div className="whitespace-nowrap text-sm font-semibold tracking-tight">
             Infinite Idea
           </div>
         </div>
@@ -131,37 +133,46 @@ export function TopBar({
         <Separator />
 
         <button
-          className="btn-ghost flex items-center gap-2 rounded-lg px-3 py-1.5 text-sm"
+          className="btn-ghost flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-sm"
+          onClick={onOpenPalette}
+          title="Search blocks, templates, actions (Ctrl+K)"
+        >
+          <SearchIcon size={14} />
+          <span
+            className="rounded-md border border-white/15 bg-white/5 px-1.5 py-0.5 font-mono text-[10px] text-white/65"
+            style={{ boxShadow: "0 1px 0 rgba(255,255,255,0.06) inset" }}
+          >
+            ⌘K
+          </span>
+        </button>
+
+        <button
+          className="btn-ghost flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-sm"
           onClick={onOpenTemplates}
-          title="Browse templates"
+          title="Browse templates (T)"
+          aria-label="Templates"
         >
-          <LayoutTemplate size={14} /> Templates
+          <LayoutTemplate size={14} />
         </button>
 
         <button
-          className="btn-ghost rounded-lg px-2.5 py-1.5"
-          onClick={onOpenShortcuts}
-          title="Keyboard shortcuts (?)"
-        >
-          <Keyboard size={14} />
-        </button>
-
-        <button
-          className="btn-ghost flex items-center gap-2 rounded-lg px-3 py-1.5 text-sm"
+          className="btn-ghost flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-sm"
           onClick={onPresent}
           title="Enter presentation mode"
+          aria-label="Present"
         >
-          <Play size={14} /> Present
+          <Play size={14} />
         </button>
 
         <Separator />
 
         <button
-          className="btn-primary flex items-center gap-2 rounded-lg px-3 py-1.5 text-sm font-medium"
+          className="btn-primary flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-sm font-medium"
           onClick={onSave}
           title="Save a .infidoc.json snapshot (Ctrl+S)"
+          aria-label="Save"
         >
-          <Save size={14} /> Save
+          <Save size={14} />
         </button>
       </div>
     </div>

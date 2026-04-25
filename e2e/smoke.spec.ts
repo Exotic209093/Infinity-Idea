@@ -43,15 +43,20 @@ test.describe("Infinite Idea — smoke", () => {
     await expect(page.locator(".tl-shape")).toHaveCount(6, { timeout: 5_000 });
   });
 
-  test("keyboard-shortcuts button opens the shortcuts dialog", async ({
+  test("command palette opens with Ctrl+K and lists keyboard shortcuts", async ({
     page,
   }) => {
     await page.goto("/");
     await expect(page.locator(".tl-container")).toBeVisible({ timeout: 30_000 });
 
-    await page
-      .getByRole("button", { name: /Keyboard shortcuts/ })
-      .click();
+    await page.keyboard.press("Control+k");
+    await expect(
+      page.locator('[aria-label="Command palette"]'),
+    ).toBeVisible();
+
+    // Filter to shortcuts then run it; the dialog should open.
+    await page.locator('[aria-label="Command palette"] input').fill("shortcuts");
+    await page.keyboard.press("Enter");
     await expect(page.getByText("Keyboard shortcuts")).toBeVisible();
     await page.keyboard.press("Escape");
     await expect(page.getByText("Keyboard shortcuts")).toBeHidden();

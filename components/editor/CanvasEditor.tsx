@@ -12,6 +12,43 @@ import {
 } from "tldraw";
 import "tldraw/tldraw.css";
 
+import {
+  Sparkles,
+  FilePlus2,
+  Save as SaveIcon,
+  Download,
+  FileText,
+  FileImage,
+  FileType,
+  Files,
+  Play,
+  Keyboard as KeyboardIcon,
+  LayoutTemplate,
+  Plus,
+  StickyNote,
+  Database,
+  Code2,
+  Workflow as WorkflowIcon,
+  ShieldCheck,
+  Plug,
+  Link2,
+  FileCode2,
+  ShieldAlert,
+  CheckCheck,
+  ListChecks,
+  Square,
+  Circle,
+  TrendingUp,
+  Workflow,
+  GitBranch,
+  Flag,
+  Users,
+  Columns3,
+  Crown,
+  MessageSquare,
+  Quote as QuoteIcon,
+  Table as TableIcon,
+} from "lucide-react";
 import { customShapeUtils } from "./shapes/customShapes";
 import { TopBar } from "@/components/ui/TopBar";
 import { ToolboxPanel } from "@/components/ui/ToolboxPanel";
@@ -28,6 +65,10 @@ import { ImportApexDialog } from "@/components/ui/ImportApexDialog";
 import { ImportProfileDialog } from "@/components/ui/ImportProfileDialog";
 import { ImportFlowDialog } from "@/components/ui/ImportFlowDialog";
 import { ImportSoqlDialog } from "@/components/ui/ImportSoqlDialog";
+import {
+  CommandPalette,
+  type CommandItem,
+} from "@/components/ui/CommandPalette";
 import {
   toFieldsText,
   toMembersText,
@@ -51,7 +92,7 @@ import { downloadSaveFile } from "@/lib/io/saveJson";
 import { loadSaveFileFromFile } from "@/lib/io/loadJson";
 import { exportPng, exportSvg } from "@/lib/io/exportImage";
 import { exportPdf, exportPdfAllPages } from "@/lib/io/exportPdf";
-import type { Template } from "@/lib/templates";
+import { TEMPLATES, BLANK_TEMPLATE, type Template } from "@/lib/templates";
 
 const Tldraw = dynamic(() => import("tldraw").then((m) => m.Tldraw), {
   ssr: false,
@@ -79,6 +120,8 @@ export function CanvasEditor() {
   const [profileImportOpen, setProfileImportOpen] = useState(false);
   const [flowImportOpen, setFlowImportOpen] = useState(false);
   const [soqlImportOpen, setSoqlImportOpen] = useState(false);
+  const [paletteOpen, setPaletteOpen] = useState(false);
+  const [toolboxCollapsed, setToolboxCollapsed] = useState(false);
   const [presentOpen, setPresentOpen] = useState(false);
   const [presentSnapshot, setPresentSnapshot] = useState<unknown>(null);
   const [savedBlocksVersion, setSavedBlocksVersion] = useState(0);
@@ -256,7 +299,8 @@ export function CanvasEditor() {
   }, []);
 
   // Global keyboard shortcuts. We intentionally do nothing while the user is
-  // typing in an input/textarea so we don't steal their keystrokes.
+  // typing in an input/textarea so we don't steal their keystrokes — except
+  // Cmd/Ctrl+K which works everywhere.
   useEffect(() => {
     const isTyping = (t: EventTarget | null) => {
       const el = t as HTMLElement | null;
@@ -270,14 +314,22 @@ export function CanvasEditor() {
       );
     };
     const onKey = (e: KeyboardEvent) => {
-      if (isTyping(e.target)) return;
       const mod = e.ctrlKey || e.metaKey;
+
+      // Cmd/Ctrl+K — command palette. Works everywhere.
+      if (mod && e.key.toLowerCase() === "k") {
+        e.preventDefault();
+        setPaletteOpen((v) => !v);
+        return;
+      }
+
+      if (isTyping(e.target)) return;
+
       if (mod && e.key.toLowerCase() === "s") {
         e.preventDefault();
         onSave();
       } else if (mod && e.key.toLowerCase() === "o") {
         e.preventDefault();
-        // Programmatically click the hidden file input in the File menu.
         const input = document.querySelector<HTMLInputElement>(
           'input[type="file"][accept*="json"]',
         );
@@ -701,6 +753,237 @@ export function CanvasEditor() {
 
   const shapeUtils = useMemo(() => customShapeUtils, []);
 
+  // Single command palette feed. Dependencies are the handlers, which are
+  // already memoised, so this list is cheap to rebuild.
+  const commandItems = useMemo<CommandItem[]>(() => {
+    const blocks: Array<{ type: string; label: string; icon: React.ReactNode; hint?: string }> = [
+      { type: CUSTOM_SHAPE_TYPES.titleBlock, label: "Title block", icon: <Crown size={14} /> },
+      { type: CUSTOM_SHAPE_TYPES.processStep, label: "Process step", icon: <Workflow size={14} /> },
+      { type: CUSTOM_SHAPE_TYPES.decisionGate, label: "Decision gate", icon: <GitBranch size={14} /> },
+      { type: CUSTOM_SHAPE_TYPES.milestone, label: "Milestone", icon: <Flag size={14} /> },
+      { type: CUSTOM_SHAPE_TYPES.orgNode, label: "Org node", icon: <Users size={14} /> },
+      { type: CUSTOM_SHAPE_TYPES.swimlane, label: "Swimlane", icon: <Columns3 size={14} /> },
+      { type: CUSTOM_SHAPE_TYPES.callout, label: "Callout", icon: <MessageSquare size={14} /> },
+      { type: CUSTOM_SHAPE_TYPES.checklist, label: "Checklist", icon: <ListChecks size={14} /> },
+      { type: CUSTOM_SHAPE_TYPES.kpiStat, label: "KPI stat", icon: <TrendingUp size={14} /> },
+      { type: CUSTOM_SHAPE_TYPES.table, label: "Table", icon: <TableIcon size={14} /> },
+      { type: CUSTOM_SHAPE_TYPES.quote, label: "Quote", icon: <QuoteIcon size={14} /> },
+      { type: CUSTOM_SHAPE_TYPES.sobject, label: "Salesforce object", hint: "SObject", icon: <Database size={14} /> },
+      { type: CUSTOM_SHAPE_TYPES.apexClass, label: "Apex class", icon: <Code2 size={14} /> },
+      { type: CUSTOM_SHAPE_TYPES.flowElement, label: "Flow element", icon: <WorkflowIcon size={14} /> },
+      { type: CUSTOM_SHAPE_TYPES.permissionMatrix, label: "Permission matrix", icon: <ShieldCheck size={14} /> },
+      { type: CUSTOM_SHAPE_TYPES.connectedApp, label: "Connected app", icon: <Plug size={14} /> },
+      { type: CUSTOM_SHAPE_TYPES.relationshipLabel, label: "Relationship chip", icon: <Link2 size={14} /> },
+      { type: CUSTOM_SHAPE_TYPES.soqlQuery, label: "SOQL query", icon: <FileCode2 size={14} /> },
+      { type: CUSTOM_SHAPE_TYPES.validationRule, label: "Validation rule", icon: <ShieldAlert size={14} /> },
+      { type: CUSTOM_SHAPE_TYPES.approvalProcess, label: "Approval process", icon: <CheckCheck size={14} /> },
+    ];
+
+    const items: CommandItem[] = [
+      // File
+      {
+        id: "file-new",
+        category: "File",
+        label: "New document",
+        icon: <FilePlus2 size={14} />,
+        keys: "Ctrl N",
+        perform: onNew,
+      },
+      {
+        id: "file-open",
+        category: "File",
+        label: "Open save file…",
+        icon: <Download size={14} />,
+        keys: "Ctrl O",
+        perform: () => {
+          const input = document.querySelector<HTMLInputElement>(
+            'input[type="file"][accept*="json"]',
+          );
+          input?.click();
+        },
+      },
+      {
+        id: "file-save",
+        category: "File",
+        label: "Save",
+        icon: <SaveIcon size={14} />,
+        keys: "Ctrl S",
+        perform: onSave,
+      },
+
+      // Export
+      {
+        id: "export-pdf",
+        category: "Export",
+        label: pageCount > 1 ? "Export this page as PDF" : "Export PDF",
+        icon: <FileText size={14} />,
+        perform: onExportPdf,
+      },
+      ...(pageCount > 1
+        ? [
+            {
+              id: "export-pdf-all",
+              category: "Export",
+              label: "Export all pages as PDF",
+              icon: <Files size={14} />,
+              hint: `${pageCount} pages`,
+              perform: onExportPdfAll,
+            } as CommandItem,
+          ]
+        : []),
+      {
+        id: "export-png",
+        category: "Export",
+        label: "Export PNG",
+        icon: <FileImage size={14} />,
+        perform: onExportPng,
+      },
+      {
+        id: "export-svg",
+        category: "Export",
+        label: "Export SVG",
+        icon: <FileType size={14} />,
+        perform: onExportSvg,
+      },
+
+      // View / Actions
+      {
+        id: "view-templates",
+        category: "View",
+        label: "Browse templates",
+        icon: <LayoutTemplate size={14} />,
+        keys: "T",
+        perform: () => openTemplatesForCurrentPage(),
+      },
+      {
+        id: "view-present",
+        category: "View",
+        label: "Enter presentation mode",
+        icon: <Play size={14} />,
+        perform: () => onPresent(),
+      },
+      {
+        id: "view-shortcuts",
+        category: "View",
+        label: "Keyboard shortcuts",
+        icon: <KeyboardIcon size={14} />,
+        keys: "?",
+        perform: () => setShortcutsOpen(true),
+      },
+
+      // Pages
+      {
+        id: "pages-add",
+        category: "Pages",
+        label: "Add new page",
+        icon: <Plus size={14} />,
+        perform: () => {
+          if (!editor) return;
+          editor.markHistoryStoppingPoint("add-page");
+          editor.createPage({ name: `Page ${editor.getPages().length + 1}` });
+          const newPages = editor.getPages();
+          const created = newPages[newPages.length - 1];
+          if (created) {
+            editor.setCurrentPage(created.id);
+            editor.zoomToFit({ animation: { duration: 300 } });
+          }
+        },
+      },
+      {
+        id: "pages-template",
+        category: "Pages",
+        label: "Add page from template…",
+        icon: <Sparkles size={14} />,
+        perform: () => openTemplatesForNewPage(),
+      },
+      {
+        id: "pages-notes",
+        category: "Pages",
+        label: "Edit speaker notes",
+        icon: <StickyNote size={14} />,
+        perform: () => setNotesOpen(true),
+      },
+
+      // Insert blocks
+      ...blocks.map<CommandItem>((b) => ({
+        id: `insert-${b.type}`,
+        category: "Insert",
+        label: `Insert ${b.label.toLowerCase()}`,
+        hint: b.hint,
+        icon: b.icon,
+        perform: () => onInsertCustom(b.type),
+      })),
+
+      // Apply templates
+      ...[BLANK_TEMPLATE, ...TEMPLATES].map<CommandItem>((t) => ({
+        id: `template-${t.id}`,
+        category: "Templates",
+        label: `Apply: ${t.name}`,
+        hint: t.description,
+        icon: <Sparkles size={14} />,
+        perform: () => onPickTemplate(t),
+      })),
+
+      // SF importers
+      {
+        id: "sf-import-sobject",
+        category: "Salesforce import",
+        label: "Import SObject from metadata…",
+        hint: "DESCRIBE JSON · .object XML",
+        icon: <Database size={14} />,
+        perform: () => setSfImportOpen(true),
+      },
+      {
+        id: "sf-import-apex",
+        category: "Salesforce import",
+        label: "Import Apex class…",
+        hint: ".cls source",
+        icon: <Code2 size={14} />,
+        perform: () => setApexImportOpen(true),
+      },
+      {
+        id: "sf-import-profile",
+        category: "Salesforce import",
+        label: "Import Profile / Permission Set…",
+        hint: ".profile / .permissionset XML",
+        icon: <ShieldCheck size={14} />,
+        perform: () => setProfileImportOpen(true),
+      },
+      {
+        id: "sf-import-flow",
+        category: "Salesforce import",
+        label: "Import Flow…",
+        hint: ".flow XML",
+        icon: <WorkflowIcon size={14} />,
+        perform: () => setFlowImportOpen(true),
+      },
+      {
+        id: "sf-import-soql",
+        category: "Salesforce import",
+        label: "Build a SOQL block…",
+        hint: "Paste any query",
+        icon: <FileCode2 size={14} />,
+        perform: () => setSoqlImportOpen(true),
+      },
+    ];
+
+    return items;
+  }, [
+    editor,
+    pageCount,
+    onNew,
+    onSave,
+    onExportPdf,
+    onExportPdfAll,
+    onExportPng,
+    onExportSvg,
+    onPresent,
+    onInsertCustom,
+    onPickTemplate,
+    openTemplatesForCurrentPage,
+    openTemplatesForNewPage,
+  ]);
+
   const tldrawComponents = useMemo<TLComponents>(
     () => ({
       // We provide our own File/Export/Undo/Redo + logo in the top bar and
@@ -744,6 +1027,7 @@ export function CanvasEditor() {
         onOpenTemplates={openTemplatesForCurrentPage}
         onOpenShortcuts={() => setShortcutsOpen(true)}
         onPresent={onPresent}
+        onOpenPalette={() => setPaletteOpen(true)}
       />
 
       <ToolboxPanel
@@ -757,13 +1041,17 @@ export function CanvasEditor() {
         onImportProfile={() => setProfileImportOpen(true)}
         onImportFlow={() => setFlowImportOpen(true)}
         onImportSoql={() => setSoqlImportOpen(true)}
+        collapsed={toolboxCollapsed}
+        onToggleCollapse={() => setToolboxCollapsed((v) => !v)}
       />
 
-      <InspectorPanel
-        editor={editor}
-        selectedShape={selected}
-        onSaveAsBlock={onSaveAsBlock}
-      />
+      {selected && (
+        <InspectorPanel
+          editor={editor}
+          selectedShape={selected}
+          onSaveAsBlock={onSaveAsBlock}
+        />
+      )}
 
       <PagesBar
         editor={editor}
@@ -823,6 +1111,12 @@ export function CanvasEditor() {
         open={soqlImportOpen}
         onClose={() => setSoqlImportOpen(false)}
         onInsert={onImportSoql}
+      />
+
+      <CommandPalette
+        open={paletteOpen}
+        onClose={() => setPaletteOpen(false)}
+        items={commandItems}
       />
 
       <ToastStack toasts={toasts} onDismiss={dismissToast} />
