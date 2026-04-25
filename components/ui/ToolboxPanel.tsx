@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { memo, useEffect, useState } from "react";
 import {
   loadSavedBlocks,
   saveBlocks,
@@ -118,7 +118,7 @@ const salesforceItems: Array<{
   { type: CUSTOM_SHAPE_TYPES.approvalProcess, label: "Approval Process", hint: "Multi-step approval", icon: <CheckCheck size={16} /> },
 ];
 
-export function ToolboxPanel({
+export const ToolboxPanel = memo(function ToolboxPanel({
   onSelectTool,
   onInsertCustom,
   onUploadImage,
@@ -210,7 +210,7 @@ export function ToolboxPanel({
 
   if (collapsed) {
     return (
-      <div className="glass-strong pointer-events-auto absolute left-3 top-20 z-10 hidden flex-col items-center gap-2 rounded-2xl p-1 shadow-glass md:flex">
+      <div className="glass-strong hud-layer pointer-events-auto absolute left-3 top-20 z-10 hidden flex-col items-center gap-2 rounded-2xl p-1 shadow-glass md:flex">
         <button
           onClick={onToggleCollapse}
           className="btn-ghost flex h-9 w-9 items-center justify-center rounded-lg"
@@ -223,7 +223,7 @@ export function ToolboxPanel({
   }
 
   return (
-    <div data-tour="toolbox" className="glass-strong animate-slide-in-left pointer-events-auto absolute left-3 top-20 z-10 hidden flex-col rounded-2xl shadow-glass md:flex"
+    <div data-tour="toolbox" className="glass-strong hud-layer animate-slide-in-left pointer-events-auto absolute left-3 top-20 z-10 hidden flex-col rounded-2xl shadow-glass md:flex"
          style={{ width, maxHeight: "calc(100vh - 110px)", animationDelay: "120ms" }}>
       <div
         onPointerDown={onResizeStart}
@@ -542,7 +542,7 @@ export function ToolboxPanel({
       </div>
     </div>
   );
-}
+});
 
 function ImportButton({
   onClick,

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { memo, useEffect, useRef, useState } from "react";
 import {
   getIndexAbove,
   getIndexBelow,
@@ -46,7 +46,11 @@ function pagesSnapshotEqual(a: PagesSnapshot, b: PagesSnapshot): boolean {
   return true;
 }
 
-export function PagesBar({ editor, onAddPageFromTemplate, onEditNotes }: Props) {
+export const PagesBar = memo(function PagesBar({
+  editor,
+  onAddPageFromTemplate,
+  onEditNotes,
+}: Props) {
   const [snap, setSnap] = useState<PagesSnapshot | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
   const [dragFrom, setDragFrom] = useState<number | null>(null);
@@ -145,7 +149,7 @@ export function PagesBar({ editor, onAddPageFromTemplate, onEditNotes }: Props) 
 
   return (
     <div className="pointer-events-none absolute bottom-20 left-1/2 z-10 -translate-x-1/2">
-      <div className="glass-strong pointer-events-auto flex items-center gap-1 rounded-2xl px-2 py-1.5 shadow-glass">
+      <div className="glass-strong hud-layer pointer-events-auto flex items-center gap-1 rounded-2xl px-2 py-1.5 shadow-glass">
         <button
           className="btn-ghost flex h-8 w-8 items-center justify-center rounded-lg disabled:cursor-not-allowed disabled:opacity-40"
           onClick={() => hasPrev && go(pages[idx - 1].id)}
@@ -332,4 +336,4 @@ export function PagesBar({ editor, onAddPageFromTemplate, onEditNotes }: Props) 
       </div>
     </div>
   );
-}
+});

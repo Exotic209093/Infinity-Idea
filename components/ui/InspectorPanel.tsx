@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { memo, useMemo } from "react";
 import type { Editor, TLShape } from "tldraw";
 import { Bookmark, Pin, PinOff } from "lucide-react";
 import { CUSTOM_SHAPE_TYPES } from "@/types/shapes";
@@ -14,7 +14,7 @@ type Props = {
   onTogglePin: () => void;
 };
 
-export function InspectorPanel({
+export const InspectorPanel = memo(function InspectorPanel({
   editor,
   selectedShape,
   onSaveAsBlock,
@@ -55,7 +55,7 @@ export function InspectorPanel({
   }, [selectedShape]);
 
   return (
-    <div className="glass-strong animate-slide-in-right pointer-events-auto absolute right-3 z-10 hidden flex-col rounded-2xl shadow-glass md:flex"
+    <div className="glass-strong hud-layer animate-slide-in-right pointer-events-auto absolute right-3 z-10 hidden flex-col rounded-2xl shadow-glass md:flex"
          style={{ width, top: 320, maxHeight: "calc(100vh - 340px)", animationDelay: "160ms" }}>
       <div
         onPointerDown={onResizeStart}
@@ -107,7 +107,7 @@ export function InspectorPanel({
       </div>
     </div>
   );
-}
+});
 
 function ShapeFields({
   editor,

@@ -1042,8 +1042,25 @@ export type ParsedSFField = {
   refTo: string;
 };
 
-export function parseSFFields(raw: string): ParsedSFField[] {
-  return raw
+// Tldraw re-invokes shape `component()` on every prop change, so a shape that
+// is being dragged reparses its raw text props per pointer move even though
+// the text itself didn't change. A simple string-keyed cache makes the lookup
+// constant-time across drags and re-renders. Entries are safe because tldraw
+// records are immutable; the same raw string always parses to the same value.
+function memoByString<T>(fn: (raw: string) => T, max = 512): (raw: string) => T {
+  const cache = new Map<string, T>();
+  return (raw: string) => {
+    const hit = cache.get(raw);
+    if (hit !== undefined) return hit;
+    const v = fn(raw);
+    if (cache.size >= max) cache.clear();
+    cache.set(raw, v);
+    return v;
+  };
+}
+
+export const parseSFFields = memoByString((raw: string): ParsedSFField[] =>
+  raw
     .split("\n")
     .map((line) => line.trim())
     .filter(Boolean)
@@ -1069,8 +1086,7 @@ export function parseSFFields(raw: string): ParsedSFField[] {
         indexed: flags.includes("idx") || flags.includes("indexed"),
         refTo: refToRaw,
       };
-    });
-}
+    }));
 
 function sobjectAccent(type: SObjectShape["props"]["sobjectType"]): string {
   switch (type) {
@@ -1353,22 +1369,23 @@ export type ParsedApexMember = {
   modifiers: string[];
 };
 
-export function parseApexMembers(raw: string): ParsedApexMember[] {
-  return raw
-    .split("\n")
-    .map((line) => line.trim())
-    .filter(Boolean)
-    .map((line) => {
-      const [sigRaw = "", modsRaw = ""] = line.split("|").map((p) => p.trim());
-      return {
-        signature: sigRaw,
-        modifiers: modsRaw
-          .split(",")
-          .map((m) => m.trim().toLowerCase())
-          .filter(Boolean),
-      };
-    });
-}
+export const parseApexMembers = memoByString(
+  (raw: string): ParsedApexMember[] =>
+    raw
+      .split("\n")
+      .map((line) => line.trim())
+      .filter(Boolean)
+      .map((line) => {
+        const [sigRaw = "", modsRaw = ""] = line.split("|").map((p) => p.trim());
+        return {
+          signature: sigRaw,
+          modifiers: modsRaw
+            .split(",")
+            .map((m) => m.trim().toLowerCase())
+            .filter(Boolean),
+        };
+      }),
+);
 
 export class ApexClassShapeUtil extends BaseBoxShapeUtil<ApexClassShape> {
   static override type = CUSTOM_SHAPE_TYPES.apexClass;
@@ -1708,24 +1725,25 @@ function truthy(v: string): boolean {
   return s === "1" || s === "y" || s === "yes" || s === "✓" || s === "true";
 }
 
-export function parsePermRows(raw: string): ParsedPermRow[] {
-  return raw
-    .split("\n")
-    .map((l) => l.trim())
-    .filter(Boolean)
-    .map((line) => {
-      const cells = line.split("|").map((c) => c.trim());
-      const [obj = "", c = "0", r = "0", u = "0", d = "0", x = "0"] = cells;
-      return {
-        object: obj,
-        create: truthy(c),
-        read: truthy(r),
-        update: truthy(u),
-        del: truthy(d),
-        modifyAll: truthy(x),
-      };
-    });
-}
+export const parsePermRows = memoByString(
+  (raw: string): ParsedPermRow[] =>
+    raw
+      .split("\n")
+      .map((l) => l.trim())
+      .filter(Boolean)
+      .map((line) => {
+        const cells = line.split("|").map((c) => c.trim());
+        const [obj = "", c = "0", r = "0", u = "0", d = "0", x = "0"] = cells;
+        return {
+          object: obj,
+          create: truthy(c),
+          read: truthy(r),
+          update: truthy(u),
+          del: truthy(d),
+          modifyAll: truthy(x),
+        };
+      }),
+);
 
 export class PermissionMatrixShapeUtil extends BaseBoxShapeUtil<PermissionMatrixShape> {
   static override type = CUSTOM_SHAPE_TYPES.permissionMatrix;
@@ -2581,18 +2599,19 @@ type ParsedApprovalStep = {
   criteria: string;
 };
 
-function parseApprovalSteps(raw: string): ParsedApprovalStep[] {
-  return raw
-    .split("\n")
-    .map((l) => l.trim())
-    .filter(Boolean)
-    .map((line) => {
-      const [name = "", approver = "", criteria = ""] = line
-        .split("|")
-        .map((p) => p.trim());
-      return { name, approver, criteria };
-    });
-}
+const parseApprovalSteps = memoByString(
+  (raw: string): ParsedApprovalStep[] =>
+    raw
+      .split("\n")
+      .map((l) => l.trim())
+      .filter(Boolean)
+      .map((line) => {
+        const [name = "", approver = "", criteria = ""] = line
+          .split("|")
+          .map((p) => p.trim());
+        return { name, approver, criteria };
+      }),
+);
 
 export class ApprovalProcessShapeUtil extends BaseBoxShapeUtil<ApprovalProcessShape> {
   static override type = CUSTOM_SHAPE_TYPES.approvalProcess;

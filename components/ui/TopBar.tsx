@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { memo, useState } from "react";
 import {
   Sparkles,
   FilePlus2,
@@ -32,7 +32,7 @@ type Props = {
   onOpenPalette: () => void;
 };
 
-export function TopBar({
+export const TopBar = memo(function TopBar({
   onNew,
   onOpen,
   onSave,
@@ -53,7 +53,7 @@ export function TopBar({
 
   return (
     <div className="pointer-events-none absolute inset-x-0 top-0 z-20 flex justify-start p-3 pl-16">
-      <div className="glass-strong animate-fade-down pointer-events-auto flex items-center gap-2 rounded-2xl px-3 py-2 shadow-glass">
+      <div className="glass-strong hud-layer animate-fade-down pointer-events-auto flex items-center gap-2 rounded-2xl px-3 py-2 shadow-glass">
         <div className="flex items-center gap-2 pr-3">
           <div
             className="flex h-8 w-8 items-center justify-center rounded-lg"
@@ -180,7 +180,7 @@ export function TopBar({
       </div>
     </div>
   );
-}
+});
 
 function Separator() {
   return <div className="mx-1 h-6 w-px bg-white/10" />;

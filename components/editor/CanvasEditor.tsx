@@ -1090,6 +1090,23 @@ export function CanvasEditor() {
     [],
   );
 
+  // Stable open/close callbacks. The panels are wrapped in React.memo so we
+  // need stable references — inline `() => setXxx(true)` would defeat the memo
+  // and re-render every panel whenever any unrelated state changes.
+  const openShortcuts = useCallback(() => setShortcutsOpen(true), []);
+  const openPalette = useCallback(() => setPaletteOpen(true), []);
+  const openSfImport = useCallback(() => setSfImportOpen(true), []);
+  const openApexImport = useCallback(() => setApexImportOpen(true), []);
+  const openProfileImport = useCallback(() => setProfileImportOpen(true), []);
+  const openFlowImport = useCallback(() => setFlowImportOpen(true), []);
+  const openSoqlImport = useCallback(() => setSoqlImportOpen(true), []);
+  const toggleToolboxCollapsed = useCallback(
+    () => setToolboxCollapsed((v) => !v),
+    [],
+  );
+  const openNotes = useCallback(() => setNotesOpen(true), []);
+  const openTemplatesEmpty = useCallback(() => setTemplatesOpen(true), []);
+
   return (
     <div className="relative h-full w-full bg-canvas-wash">
       <div className="tldraw-wrapper absolute inset-0">
@@ -1102,7 +1119,7 @@ export function CanvasEditor() {
       </div>
 
       {editor && shapeCount === 0 && (
-        <EmptyCanvas onBrowseTemplates={() => setTemplatesOpen(true)} />
+        <EmptyCanvas onBrowseTemplates={openTemplatesEmpty} />
       )}
 
       <TopBar
@@ -1117,9 +1134,9 @@ export function CanvasEditor() {
         onUndo={onUndo}
         onRedo={onRedo}
         onOpenTemplates={openTemplatesForCurrentPage}
-        onOpenShortcuts={() => setShortcutsOpen(true)}
+        onOpenShortcuts={openShortcuts}
         onPresent={onPresent}
-        onOpenPalette={() => setPaletteOpen(true)}
+        onOpenPalette={openPalette}
       />
 
       <ToolboxPanel
@@ -1128,13 +1145,13 @@ export function CanvasEditor() {
         onUploadImage={onUploadImage}
         onInsertSavedBlock={onInsertSavedBlock}
         savedBlocksVersion={savedBlocksVersion}
-        onImportSObject={() => setSfImportOpen(true)}
-        onImportApex={() => setApexImportOpen(true)}
-        onImportProfile={() => setProfileImportOpen(true)}
-        onImportFlow={() => setFlowImportOpen(true)}
-        onImportSoql={() => setSoqlImportOpen(true)}
+        onImportSObject={openSfImport}
+        onImportApex={openApexImport}
+        onImportProfile={openProfileImport}
+        onImportFlow={openFlowImport}
+        onImportSoql={openSoqlImport}
         collapsed={toolboxCollapsed}
-        onToggleCollapse={() => setToolboxCollapsed((v) => !v)}
+        onToggleCollapse={toggleToolboxCollapsed}
         recents={recents}
       />
 
@@ -1151,7 +1168,7 @@ export function CanvasEditor() {
       <PagesBar
         editor={editor}
         onAddPageFromTemplate={openTemplatesForNewPage}
-        onEditNotes={() => setNotesOpen(true)}
+        onEditNotes={openNotes}
       />
 
       {/* Lazy-mount each dialog: when closed it doesn't even live in the React

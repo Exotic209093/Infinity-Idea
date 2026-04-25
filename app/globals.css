@@ -54,6 +54,17 @@ main {
   border: 1px solid rgba(255, 255, 255, 0.14);
 }
 
+/* Promote HUD panels to their own GPU compositor layer so the tldraw canvas
+   underneath can repaint without dirtying the panel pixels. We can't use
+   `contain: paint` because the panels have legitimately overflowing children
+   (dropdown menus, resize handles), so we promote with a hardware-accelerated
+   transform + isolation instead. */
+.hud-layer {
+  transform: translateZ(0);
+  isolation: isolate;
+  will-change: transform;
+}
+
 .btn-primary {
   background: linear-gradient(135deg, #6c63ff 0%, #a855f7 50%, #ec4899 100%);
   color: white;
