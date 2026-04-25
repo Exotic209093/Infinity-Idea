@@ -127,6 +127,29 @@ export function CanvasEditor() {
   const [toolboxCollapsed, setToolboxCollapsed] = useState(false);
   const [welcomeOpen, setWelcomeOpen] = useState(false);
   const [tourOpen, setTourOpen] = useState(false);
+  const [inspectorPinned, setInspectorPinned] = useState<boolean>(() => {
+    if (typeof window === "undefined") return false;
+    try {
+      return window.localStorage.getItem("infinite-idea:inspector-pinned") === "1";
+    } catch {
+      return false;
+    }
+  });
+
+  const togglePinInspector = useCallback(() => {
+    setInspectorPinned((prev) => {
+      const next = !prev;
+      try {
+        window.localStorage.setItem(
+          "infinite-idea:inspector-pinned",
+          next ? "1" : "0",
+        );
+      } catch {
+        /* ignore */
+      }
+      return next;
+    });
+  }, []);
   const [presentOpen, setPresentOpen] = useState(false);
   const [presentSnapshot, setPresentSnapshot] = useState<unknown>(null);
   const [savedBlocksVersion, setSavedBlocksVersion] = useState(0);
@@ -1110,11 +1133,13 @@ export function CanvasEditor() {
         recents={recents}
       />
 
-      {selected && (
+      {(selected || inspectorPinned) && (
         <InspectorPanel
           editor={editor}
           selectedShape={selected}
           onSaveAsBlock={onSaveAsBlock}
+          pinned={inspectorPinned}
+          onTogglePin={togglePinInspector}
         />
       )}
 

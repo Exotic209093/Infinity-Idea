@@ -2,20 +2,32 @@
 
 import { useMemo } from "react";
 import type { Editor, TLShape } from "tldraw";
-import { Bookmark } from "lucide-react";
+import { Bookmark, Pin, PinOff } from "lucide-react";
 import { CUSTOM_SHAPE_TYPES } from "@/types/shapes";
+import { usePanelWidth } from "@/lib/panelWidth";
 
 type Props = {
   editor: Editor | null;
   selectedShape: TLShape | null;
   onSaveAsBlock: () => void;
+  pinned: boolean;
+  onTogglePin: () => void;
 };
 
 export function InspectorPanel({
   editor,
   selectedShape,
   onSaveAsBlock,
+  pinned,
+  onTogglePin,
 }: Props) {
+  const { width, onResizeStart } = usePanelWidth({
+    key: "infinite-idea:inspector-width",
+    defaultWidth: 288,
+    min: 240,
+    max: 440,
+    side: "left",
+  });
   const title = useMemo(() => {
     if (!selectedShape) return "No selection";
     const t = selectedShape.type;
@@ -43,13 +55,34 @@ export function InspectorPanel({
   }, [selectedShape]);
 
   return (
-    <div className="glass-strong animate-slide-in-right pointer-events-auto absolute right-3 z-10 hidden w-72 flex-col overflow-hidden rounded-2xl shadow-glass md:flex"
-         style={{ top: 320, maxHeight: "calc(100vh - 340px)", animationDelay: "160ms" }}>
-      <div className="border-b border-white/10 p-3">
-        <div className="text-[11px] font-semibold uppercase tracking-wider text-white/50">
-          Inspector
+    <div className="glass-strong animate-slide-in-right pointer-events-auto absolute right-3 z-10 hidden flex-col rounded-2xl shadow-glass md:flex"
+         style={{ width, top: 320, maxHeight: "calc(100vh - 340px)", animationDelay: "160ms" }}>
+      <div
+        onPointerDown={onResizeStart}
+        className="resize-handle group absolute -left-1 top-0 z-20 h-full w-2 cursor-col-resize"
+        title="Drag to resize"
+      >
+        <div className="absolute left-1 top-1/2 h-12 w-0.5 -translate-y-1/2 rounded-full bg-white/10 transition group-hover:bg-white/40" />
+      </div>
+      <div className="flex flex-1 flex-col overflow-hidden rounded-2xl">
+      <div className="flex items-start justify-between border-b border-white/10 p-3">
+        <div>
+          <div className="text-[11px] font-semibold uppercase tracking-wider text-white/50">
+            Inspector
+          </div>
+          <div className="mt-1 text-sm font-bold">{title}</div>
         </div>
-        <div className="mt-1 text-sm font-bold">{title}</div>
+        <button
+          onClick={onTogglePin}
+          className={[
+            "btn-ghost flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-md transition",
+            pinned ? "text-brand-300" : "text-white/55 hover:text-white",
+          ].join(" ")}
+          title={pinned ? "Unpin inspector (auto-hide)" : "Pin inspector (always visible)"}
+          aria-pressed={pinned}
+        >
+          {pinned ? <Pin size={14} /> : <PinOff size={14} />}
+        </button>
       </div>
 
       <div className="scroll-thin flex-1 overflow-y-auto p-3">
@@ -70,6 +103,7 @@ export function InspectorPanel({
             </button>
           </>
         )}
+      </div>
       </div>
     </div>
   );

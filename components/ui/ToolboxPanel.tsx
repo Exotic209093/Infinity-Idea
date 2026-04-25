@@ -45,6 +45,7 @@ import {
   Clock,
 } from "lucide-react";
 import { CUSTOM_SHAPE_TYPES } from "@/types/shapes";
+import { usePanelWidth } from "@/lib/panelWidth";
 
 type Tab = "shapes" | "diagrams" | "blocks" | "salesforce" | "saved";
 
@@ -135,6 +136,13 @@ export function ToolboxPanel({
   const [tab, setTab] = useState<Tab>("blocks");
   const [savedBlocks, setSavedBlocks] = useState<SavedBlock[]>([]);
   const [search, setSearch] = useState("");
+  const { width, onResizeStart } = usePanelWidth({
+    key: "infinite-idea:toolbox-width",
+    defaultWidth: 256,
+    min: 220,
+    max: 420,
+    side: "right",
+  });
 
   useEffect(() => {
     setSavedBlocks(loadSavedBlocks());
@@ -215,8 +223,16 @@ export function ToolboxPanel({
   }
 
   return (
-    <div data-tour="toolbox" className="glass-strong animate-slide-in-left pointer-events-auto absolute left-3 top-20 z-10 hidden w-64 flex-col overflow-hidden rounded-2xl shadow-glass md:flex"
-         style={{ maxHeight: "calc(100vh - 110px)", animationDelay: "120ms" }}>
+    <div data-tour="toolbox" className="glass-strong animate-slide-in-left pointer-events-auto absolute left-3 top-20 z-10 hidden flex-col rounded-2xl shadow-glass md:flex"
+         style={{ width, maxHeight: "calc(100vh - 110px)", animationDelay: "120ms" }}>
+      <div
+        onPointerDown={onResizeStart}
+        className="resize-handle group absolute -right-1 top-0 z-20 h-full w-2 cursor-col-resize"
+        title="Drag to resize"
+      >
+        <div className="absolute right-1 top-1/2 h-12 w-0.5 -translate-y-1/2 rounded-full bg-white/10 transition group-hover:bg-white/40" />
+      </div>
+      <div className="flex flex-1 flex-col overflow-hidden rounded-2xl">
       <div className="flex items-center gap-1.5 border-b border-white/10 p-1.5">
         <div className="flex flex-1 items-center gap-2 rounded-lg bg-white/5 px-2 py-1.5">
           <Search size={12} className="text-white/45" />
@@ -522,6 +538,7 @@ export function ToolboxPanel({
             }}
           />
         </label>
+      </div>
       </div>
     </div>
   );
