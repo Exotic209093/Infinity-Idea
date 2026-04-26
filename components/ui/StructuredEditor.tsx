@@ -76,7 +76,7 @@ export function StructuredEditor({ mode, schema, shapeProps, onChange, onOpenFul
             <button
               type="button"
               className="btn-ghost flex h-6 w-6 items-center justify-center rounded"
-              title="Delete row"
+              aria-label="Delete row"
               onClick={() => removeRow(rowIdx)}
             >
               <Trash2 size={12} />
@@ -170,9 +170,9 @@ function CellInput({ column, value, onChange, compact }: CellProps) {
         />
       );
     case "flag-list": {
-      const selected = (value as string[]) ?? [];
+      const selected = Array.isArray(value) ? (value as string[]) : [];
       return (
-        <div className="flex flex-wrap gap-1">
+        <div role="group" aria-label={column.label} className="flex flex-wrap gap-1">
           {column.flags.map((f) => {
             const on = selected.includes(f.key);
             return (

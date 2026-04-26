@@ -28,11 +28,10 @@ describe("<StructuredEditor> rendering", () => {
     render(
       <StructuredEditor mode="full" schema={schema} shapeProps={props} onChange={() => {}} />,
     );
-    // Each flag-list column has 7 toggleable pills × 2 rows = 14 pill buttons
+    // 7 flag pills × 2 rows = 14 toggle buttons
     expect(
-      screen.getAllByRole("button", { name: /required|unique|external id|primary key|pii|encrypted|indexed/i })
-        .length,
-    ).toBeGreaterThan(0);
+      screen.getAllByRole("button", { name: /required|unique|external id|primary key|pii|encrypted|indexed/i }),
+    ).toHaveLength(14);
   });
 
   it("compact mode shows the Edit fully button when onOpenFull provided", () => {
