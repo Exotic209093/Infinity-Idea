@@ -35,6 +35,27 @@ export function StructuredEditor({ mode, schema, shapeProps, onChange, onOpenFul
   const showHeaders = mode === "full" || columns.length > 2;
   const compact = mode === "compact";
 
+  const flush = (next: Row[]) => {
+    setRows(next);
+    onChange(schema.serialize(next));
+  };
+
+  const setCell = (rowIdx: number, key: string, value: unknown) => {
+    const next = rows.map((r, i) => (i === rowIdx ? { ...r, [key]: value } : r));
+    flush(next);
+  };
+
+  // For dynamic-column shapes (Table), pad the new row with empty strings up
+  // to the current column count so the editor doesn't render a zero-column row.
+  const addRow = () => {
+    const fresh: Row = schema.dynamicColumns
+      ? Object.fromEntries(columns.map((c) => [c.key, ""]))
+      : schema.emptyRow();
+    flush([...rows, fresh]);
+  };
+
+  const removeRow = (rowIdx: number) => flush(rows.filter((_, i) => i !== rowIdx));
+
   const [dragFrom, setDragFrom] = useState<number | null>(null);
 
   const onDragStart = (i: number) => (e: React.DragEvent) => {
@@ -57,27 +78,6 @@ export function StructuredEditor({ mode, schema, shapeProps, onChange, onOpenFul
     setDragFrom(null);
   };
 
-  const flush = (next: Row[]) => {
-    setRows(next);
-    onChange(schema.serialize(next));
-  };
-
-  const setCell = (rowIdx: number, key: string, value: unknown) => {
-    const next = rows.map((r, i) => (i === rowIdx ? { ...r, [key]: value } : r));
-    flush(next);
-  };
-
-  // For dynamic-column shapes (Table), pad the new row with empty strings up
-  // to the current column count so the editor doesn't render a zero-column row.
-  const addRow = () => {
-    const fresh: Row = schema.dynamicColumns
-      ? Object.fromEntries(columns.map((c) => [c.key, ""]))
-      : schema.emptyRow();
-    flush([...rows, fresh]);
-  };
-
-  const removeRow = (rowIdx: number) => flush(rows.filter((_, i) => i !== rowIdx));
-
   return (
     <div className={compact ? "flex flex-col gap-1" : "flex flex-col gap-3"}>
       {!compact && schema.helpHeader && (
@@ -96,6 +96,14 @@ export function StructuredEditor({ mode, schema, shapeProps, onChange, onOpenFul
 
       <div className={compact ? "max-h-56 overflow-y-auto pr-1" : ""}>
         {rows.map((row, rowIdx) => (
+          // We key by index rather than a stable id. Inputs are fully controlled
+          // (value comes from row[c.key]), so React re-applies the right value
+          // when rows swap positions on reorder. The known caveat is that an
+          // active input's cursor position / IME composition belongs to the DOM
+          // node and survives the swap, so dragging while a cell is focused can
+          // briefly show the wrong cursor context. Acceptable today; revisit if
+          // we add features (e.g. autofill, drag-without-blur) that lean on
+          // stable identity.
           <div
             key={rowIdx}
             draggable
