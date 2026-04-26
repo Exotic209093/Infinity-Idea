@@ -110,4 +110,42 @@ test.describe("Infinite Idea — smoke", () => {
       page.getByText(/doesn't look like a valid Infinite Idea file/i),
     ).toBeVisible({ timeout: 10_000 });
   });
+
+  test("structured editor: typing into a table cell persists in the inspector", async ({
+    page,
+  }) => {
+    await page.goto("/?welcome=0");
+    await expect(page.locator(".tl-container")).toBeVisible({ timeout: 30_000 });
+
+    // Insert a Table block from the toolbox.
+    // The button's accessible name is "Table Editable grid" (label + hint text).
+    await page
+      .getByRole("button", { name: /Table.*Editable grid/ })
+      .first()
+      .click();
+
+    // Inspector should mount with the structured editor below the Label.
+    // Find a text input inside the inspector panel that lives in the
+    // structured editor (not the Label textarea above it).
+    const inspector = page
+      .locator(".glass-strong")
+      .filter({ hasText: "Inspector" });
+    await expect(inspector).toBeVisible();
+
+    // Type into the first text cell of the structured editor (skipping the
+    // Label textarea). The Table schema sets all columns as `text`, so the
+    // cells are <input> elements with no explicit type attribute (defaults to
+    // text). The Label field above uses a <textarea>, so the first bare
+    // <input> inside the inspector belongs to the structured editor.
+    const cell = inspector.locator("input:not([type])").first();
+    await expect(cell).toBeVisible();
+    await cell.fill("Hello");
+
+    // Blur to trigger the immediate flush.
+    await cell.blur();
+
+    // The cell should retain the typed value (proves controlled-input
+    // round-trip via the tldraw store works end-to-end).
+    await expect(cell).toHaveValue("Hello");
+  });
 });
