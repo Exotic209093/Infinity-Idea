@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { X } from "lucide-react";
 
 type Props = {
@@ -22,6 +23,14 @@ export function Dialog({
 }: Props) {
   const cardRef = useRef<HTMLDivElement>(null);
 
+  // Portals must mount to a real DOM node; SSR (where document is undefined)
+  // gets a stub `null` portal target until hydration. Tracking that in state
+  // ensures we don't try to portal during the server render pass.
+  const [portalTarget, setPortalTarget] = useState<HTMLElement | null>(null);
+  useEffect(() => {
+    setPortalTarget(typeof document !== "undefined" ? document.body : null);
+  }, []);
+
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => {
@@ -31,9 +40,9 @@ export function Dialog({
     return () => window.removeEventListener("keydown", onKey);
   }, [open, onClose]);
 
-  if (!open) return null;
+  if (!open || !portalTarget) return null;
 
-  return (
+  return createPortal(
     <div
       className="animate-fade-in fixed inset-0 flex items-center justify-center p-4"
       onMouseDown={(e) => {
@@ -72,6 +81,7 @@ export function Dialog({
         </div>
         <div className="scroll-thin flex-1 overflow-y-auto p-6">{children}</div>
       </div>
-    </div>
+    </div>,
+    portalTarget,
   );
 }
