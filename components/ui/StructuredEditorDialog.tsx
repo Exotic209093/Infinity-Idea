@@ -29,13 +29,18 @@ export function StructuredEditorDialog({
   // The raw textareas show one prop at a time. For multi-prop shapes
   // (Checklist) we just show the primary key with a hint that the rest
   // round-trips through Visual mode.
-  const rawKey = schema.shape === "checklist" ? "items" : Object.keys(schema.serialize([]))[0];
+  const rawKey = schema.rawKey ?? Object.keys(schema.serialize([]))[0];
   const [rawValue, setRawValue] = useState<string>(String(shapeProps[rawKey] ?? ""));
 
-  // Sync rawValue when shapeProps update from outside (visual edits, etc.).
+  // Re-sync rawValue ONLY when the user transitions into raw mode (or the
+  // rawKey changes). While in raw mode, rawValue is the source of truth;
+  // we must NOT resync from shapeProps mid-typing — the visual editor's
+  // debounce flush would otherwise race in and clobber unsaved keystrokes.
+  // shapeProps is intentionally absent from the deps.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (view === "raw") setRawValue(String(shapeProps[rawKey] ?? ""));
-  }, [shapeProps, rawKey, view]);
+  }, [view, rawKey]);
 
   const onRawChange = (next: string) => {
     setRawValue(next);
@@ -55,29 +60,45 @@ export function StructuredEditorDialog({
         aria-label="Editor mode"
         className="mb-4 flex items-center gap-1 self-start rounded-lg border border-white/10 bg-white/5 p-0.5"
       >
-        <ToggleButton active={view === "visual"} onClick={() => setView("visual")}>
+        <ToggleButton
+          active={view === "visual"}
+          onClick={() => setView("visual")}
+          id="se-tab-visual"
+          controlsId="se-panel-visual"
+        >
           Visual
         </ToggleButton>
-        <ToggleButton active={view === "raw"} onClick={() => setView("raw")}>
+        <ToggleButton
+          active={view === "raw"}
+          onClick={() => setView("raw")}
+          id="se-tab-raw"
+          controlsId="se-panel-raw"
+        >
           Raw text
         </ToggleButton>
       </div>
 
-      {view === "visual" ? (
-        <StructuredEditor
-          mode="full"
-          schema={schema}
-          shapeProps={shapeProps}
-          onChange={onChange}
-        />
-      ) : (
-        <textarea
-          className="w-full min-h-[300px] resize-y rounded-md border border-white/10 bg-white/5 px-3 py-2 font-mono text-sm text-white outline-none focus:border-brand-400"
-          value={rawValue}
-          spellCheck={false}
-          onChange={(e) => onRawChange(e.target.value)}
-        />
-      )}
+      <div
+        role="tabpanel"
+        id={view === "visual" ? "se-panel-visual" : "se-panel-raw"}
+        aria-labelledby={view === "visual" ? "se-tab-visual" : "se-tab-raw"}
+      >
+        {view === "visual" ? (
+          <StructuredEditor
+            mode="full"
+            schema={schema}
+            shapeProps={shapeProps}
+            onChange={onChange}
+          />
+        ) : (
+          <textarea
+            className="w-full min-h-[300px] resize-y rounded-md border border-white/10 bg-white/5 px-3 py-2 font-mono text-sm text-white outline-none focus:border-brand-400"
+            value={rawValue}
+            spellCheck={false}
+            onChange={(e) => onRawChange(e.target.value)}
+          />
+        )}
+      </div>
     </Dialog>
   );
 }
@@ -85,17 +106,23 @@ export function StructuredEditorDialog({
 function ToggleButton({
   active,
   onClick,
+  id,
+  controlsId,
   children,
 }: {
   active: boolean;
   onClick: () => void;
+  id: string;
+  controlsId: string;
   children: React.ReactNode;
 }) {
   return (
     <button
       type="button"
+      id={id}
       role="tab"
       aria-selected={active}
+      aria-controls={controlsId}
       onClick={onClick}
       className={[
         "rounded-md px-3 py-1 text-xs font-semibold transition",

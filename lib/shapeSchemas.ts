@@ -46,6 +46,11 @@ export type ColumnSchema = {
   dynamicColumns?: boolean;
   emptyRow: () => Row;
   helpHeader?: string;
+  // The primary prop key to show in Raw text mode of the popout dialog.
+  // Defaults to the first key returned by serialize() — set this explicitly
+  // when serialize returns multiple keys (e.g. Checklist writes both
+  // `items` and `checked`; Raw mode should show `items`).
+  rawKey?: string;
   parse: (props: Record<string, unknown>) => Row[];
   serialize: (rows: Row[]) => Record<string, string>;
 };
@@ -250,6 +255,7 @@ const tableSchema: ColumnSchema = {
 // Checklist: items + checked
 const checklistSchema: ColumnSchema = {
   shape: CUSTOM_SHAPE_TYPES.checklist,
+  rawKey: "items",
   columns: [
     { key: "item", label: "Item", kind: "text", width: "flex" },
     { key: "checked", label: "Done", kind: "checkbox", width: "narrow" },
