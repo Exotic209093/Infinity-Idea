@@ -1088,6 +1088,35 @@ export const parseSFFields = memoByString((raw: string): ParsedSFField[] =>
       };
     }));
 
+const SF_FLAG_ORDER: Array<keyof Pick<ParsedSFField, "required" | "unique" | "externalId" | "primaryKey" | "pii" | "encrypted" | "indexed">> = [
+  "required",
+  "unique",
+  "externalId",
+  "primaryKey",
+  "pii",
+  "encrypted",
+  "indexed",
+];
+
+const SF_FLAG_TOKEN: Record<typeof SF_FLAG_ORDER[number], string> = {
+  required: "req",
+  unique: "unq",
+  externalId: "ext",
+  primaryKey: "pk",
+  pii: "pii",
+  encrypted: "enc",
+  indexed: "idx",
+};
+
+export function serializeSFFields(rows: ParsedSFField[]): string {
+  return rows
+    .map((f) => {
+      const flags = SF_FLAG_ORDER.filter((k) => f[k]).map((k) => SF_FLAG_TOKEN[k]).join(",");
+      return [f.name, f.type, flags, f.refTo].join(" | ");
+    })
+    .join("\n");
+}
+
 function sobjectAccent(type: SObjectShape["props"]["sobjectType"]): string {
   switch (type) {
     case "custom":
@@ -1386,6 +1415,12 @@ export const parseApexMembers = memoByString(
         };
       }),
 );
+
+export function serializeApexMembers(rows: ParsedApexMember[]): string {
+  return rows
+    .map((m) => [m.signature, m.modifiers.join(", ")].join(" | "))
+    .join("\n");
+}
 
 export class ApexClassShapeUtil extends BaseBoxShapeUtil<ApexClassShape> {
   static override type = CUSTOM_SHAPE_TYPES.apexClass;
@@ -1744,6 +1779,15 @@ export const parsePermRows = memoByString(
         };
       }),
 );
+
+export function serializePermRows(rows: ParsedPermRow[]): string {
+  const bit = (b: boolean) => (b ? "1" : "0");
+  return rows
+    .map((r) =>
+      [r.object, bit(r.create), bit(r.read), bit(r.update), bit(r.del), bit(r.modifyAll)].join(" | "),
+    )
+    .join("\n");
+}
 
 export class PermissionMatrixShapeUtil extends BaseBoxShapeUtil<PermissionMatrixShape> {
   static override type = CUSTOM_SHAPE_TYPES.permissionMatrix;
@@ -2593,13 +2637,13 @@ export type ApprovalProcessShape = TLBaseShape<
   }
 >;
 
-type ParsedApprovalStep = {
+export type ParsedApprovalStep = {
   name: string;
   approver: string;
   criteria: string;
 };
 
-const parseApprovalSteps = memoByString(
+export const parseApprovalSteps = memoByString(
   (raw: string): ParsedApprovalStep[] =>
     raw
       .split("\n")
@@ -2612,6 +2656,12 @@ const parseApprovalSteps = memoByString(
         return { name, approver, criteria };
       }),
 );
+
+export function serializeApprovalSteps(rows: ParsedApprovalStep[]): string {
+  return rows
+    .map((s) => [s.name, s.approver, s.criteria].join(" | "))
+    .join("\n");
+}
 
 export class ApprovalProcessShapeUtil extends BaseBoxShapeUtil<ApprovalProcessShape> {
   static override type = CUSTOM_SHAPE_TYPES.approvalProcess;
