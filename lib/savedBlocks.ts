@@ -1,4 +1,4 @@
-import type { Editor, TLShapeId, TLShape } from "tldraw";
+import { createShapeId, type Editor, type TLShapeId, type TLShape } from "tldraw";
 
 /*
  * Saved blocks: user-defined reusable shape bundles stored in localStorage.
@@ -83,7 +83,7 @@ export function insertSavedBlock(editor: Editor, block: SavedBlock): void {
   editor.markHistoryStoppingPoint(`insert-block-${block.id}`);
   // Fresh IDs so repeat drops don't collide with earlier ones.
   const mapped = block.shapes.map((s) => {
-    const newId = `shape:${Math.random().toString(36).slice(2, 10)}` as TLShapeId;
+    const newId = createShapeId();
     newIds.push(newId);
     return {
       ...s,

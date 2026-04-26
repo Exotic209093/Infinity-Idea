@@ -3,6 +3,7 @@
 import dynamic from "next/dynamic";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
+  createShapeId,
   GeoShapeGeoStyle,
   getSnapshot,
   type Editor,
@@ -480,7 +481,7 @@ export function CanvasEditor() {
         if (overlaps.length === 0) break;
         y = Math.max(...overlaps.map((b) => b.maxY)) + 24;
       }
-      const id = `shape:${Math.random().toString(36).slice(2, 10)}` as TLShapeId;
+      const id = createShapeId();
       editor.markHistoryStoppingPoint(`insert-${shapeType}`);
       editor.createShape({ id, type: shapeType, x, y });
       editor.setCurrentTool("select");
@@ -565,7 +566,7 @@ export function CanvasEditor() {
         const row = Math.floor(i / cols);
         const x = originX + col * (cellW + gap);
         const y = originY + row * (cellH + gap);
-        const id = `shape:${Math.random().toString(36).slice(2, 10)}` as TLShapeId;
+        const id = createShapeId();
         apiToId.set(obj.apiName, id);
         created.push(id);
         objBoundsCache.set(obj.apiName, { x, y, w: 320, h: 300 });
@@ -592,7 +593,7 @@ export function CanvasEditor() {
         const objBounds = objBoundsCache.get(obj.apiName);
         if (!objBounds) return;
         obj.validationRules.forEach((rule, j) => {
-          const ruleId = `shape:${Math.random().toString(36).slice(2, 10)}` as TLShapeId;
+          const ruleId = createShapeId();
           totalRules++;
           editor.createShape({
             id: ruleId,
@@ -624,7 +625,7 @@ export function CanvasEditor() {
         if (!fromBounds || !toBounds) return;
         const cx = (fromBounds.center.x + toBounds.center.x) / 2 - 90;
         const cy = (fromBounds.center.y + toBounds.center.y) / 2 - 26;
-        const chipId = `shape:${Math.random().toString(36).slice(2, 10)}` as TLShapeId;
+        const chipId = createShapeId();
         editor.createShape({
           id: chipId,
           type: CUSTOM_SHAPE_TYPES.relationshipLabel,
@@ -660,7 +661,7 @@ export function CanvasEditor() {
     (apex: ImportedApex) => {
       if (!editor) return;
       const viewport = editor.getViewportPageBounds();
-      const id = `shape:${Math.random().toString(36).slice(2, 10)}` as TLShapeId;
+      const id = createShapeId();
       editor.markHistoryStoppingPoint("import-apex");
       editor.createShape({
         id,
@@ -689,7 +690,7 @@ export function CanvasEditor() {
     (profile: ImportedProfile) => {
       if (!editor) return;
       const viewport = editor.getViewportPageBounds();
-      const id = `shape:${Math.random().toString(36).slice(2, 10)}` as TLShapeId;
+      const id = createShapeId();
       editor.markHistoryStoppingPoint("import-profile");
       editor.createShape({
         id,
@@ -729,7 +730,7 @@ export function CanvasEditor() {
       editor.markHistoryStoppingPoint("import-flow");
 
       // Title block with the flow name
-      const titleId = `shape:${Math.random().toString(36).slice(2, 10)}` as TLShapeId;
+      const titleId = createShapeId();
       editor.createShape({
         id: titleId,
         type: CUSTOM_SHAPE_TYPES.titleBlock,
@@ -749,7 +750,7 @@ export function CanvasEditor() {
         const row = Math.floor(i / cols);
         const x = originX + col * (cellW + gap);
         const y = originY + 40 + row * (cellH + gap);
-        const id = `shape:${Math.random().toString(36).slice(2, 10)}` as TLShapeId;
+        const id = createShapeId();
         nameToId.set(el.name, id);
         editor.createShape({
           id,
@@ -776,7 +777,7 @@ export function CanvasEditor() {
           const fromBounds = editor.getShapePageBounds(fromId);
           const toBounds = editor.getShapePageBounds(toId);
           if (!fromBounds || !toBounds) continue;
-          const arrowId = `shape:${Math.random().toString(36).slice(2, 10)}` as TLShapeId;
+          const arrowId = createShapeId();
           editor.createShape({
             id: arrowId,
             type: "arrow",
@@ -810,7 +811,7 @@ export function CanvasEditor() {
     (q: ImportedSOQL) => {
       if (!editor) return;
       const viewport = editor.getViewportPageBounds();
-      const id = `shape:${Math.random().toString(36).slice(2, 10)}` as TLShapeId;
+      const id = createShapeId();
       editor.markHistoryStoppingPoint("import-soql");
       editor.createShape({
         id,
