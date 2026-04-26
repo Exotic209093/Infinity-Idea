@@ -38,6 +38,14 @@ export function StructuredEditor({ mode, schema, shapeProps, onChange, onOpenFul
   const pendingPatchRef = useRef<Record<string, string> | null>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // Always call the latest `onChange`, not the one captured at first render.
+  // This matters for the unmount-flush effect, whose cleanup runs once with
+  // the closure from the render where the effect mounted.
+  const onChangeRef = useRef(onChange);
+  useEffect(() => {
+    onChangeRef.current = onChange;
+  });
+
   const cancelDebounce = () => {
     if (debounceRef.current) {
       clearTimeout(debounceRef.current);
@@ -50,7 +58,7 @@ export function StructuredEditor({ mode, schema, shapeProps, onChange, onOpenFul
     const pending = pendingPatchRef.current;
     if (pending) {
       pendingPatchRef.current = null;
-      onChange(pending);
+      onChangeRef.current(pending);
     }
   };
 
