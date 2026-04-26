@@ -15,8 +15,7 @@ type Props = {
 };
 
 export function StructuredEditor({ mode, schema, shapeProps, onChange, onOpenFull }: Props) {
-  const initialRows = useMemo(() => schema.parse(shapeProps), [schema, shapeProps]);
-  const [rows, setRows] = useState<Row[]>(initialRows);
+  const [rows, setRows] = useState<Row[]>(() => schema.parse(shapeProps));
 
   // For Table (dynamicColumns) we infer columns from row width.
   const columns: ReadonlyArray<Column> = useMemo(() => {
@@ -298,6 +297,7 @@ function CellInput({ column, value, onChange, compact }: CellProps) {
       return (
         <input
           type="checkbox"
+          aria-label={column.label}
           className="h-4 w-4 cursor-pointer accent-brand-400"
           checked={!!value}
           onChange={(e) => onChange(e.target.checked)}

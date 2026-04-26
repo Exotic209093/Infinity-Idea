@@ -38,9 +38,12 @@ npm run dev
 ## Features
 
 - **Freeform canvas** — shapes, text, arrows, connectors, freehand drawing, image embedding (via tldraw)
-- **7 template blocks** — Title Block, Process Step, Decision Gate, Milestone, Org Node, Swimlane, Callout
+- **20 native blocks** — Title, Process Step, Decision Gate, Milestone, Org Node, Swimlane, Callout, Checklist, KPI Stat, Table, Quote — plus Salesforce-native blocks (SObject, Apex Class, Flow Element, Permission Matrix, Connected App, Relationship, SOQL Query, Validation Rule, Approval Process)
+- **6 starter templates** — Process Flow, Project Roadmap, Org Chart, Salesforce Schema, Salesforce Architecture, Onboarding
+- **Salesforce importers** — paste DESCRIBE JSON or `.object` XML; `.cls`, `.profile`, `.permissionset`, `.flow` XML; raw SOQL queries — auto-laid-out on the canvas
+- **Inline structured editing** — fields, members, permissions, table cells, etc. edit as proper rows in the inspector with a popout for batch work
 - **Save / resume** — download a `.infidoc.json` file and re-upload to continue editing
-- **Exports** — PDF, PNG (2×), SVG
+- **Exports** — PDF (per-page or all pages), PNG (2×), SVG
 - **Stateless** — no backend, no database, no login
 
 ## Save file format

@@ -542,7 +542,7 @@ function ShapeFields({
       {schema && (
         <section
           role="region"
-          aria-label={schemaDialogTitle(shape.type).replace(/^Edit /, "")}
+          aria-label={schemaDialogTitle(shape.type).replace(/^Edit\s*/, "") || "Editor"}
         >
           <StructuredEditor
             mode="compact"

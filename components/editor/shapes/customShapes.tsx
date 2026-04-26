@@ -578,18 +578,6 @@ export function serializeChecklistItems(rows: ParsedChecklistItem[]): { items: s
   };
 }
 
-// Kept for the existing ChecklistShapeUtil.component implementation that
-// reads items/checked separately. The new editor uses the typed pair above.
-function splitItems(s: string): string[] {
-  return s.split("\n");
-}
-function splitChecked(s: string): boolean[] {
-  return s.split("").map((c) => c === "1");
-}
-function joinChecked(flags: boolean[]): string {
-  return flags.map((b) => (b ? "1" : "0")).join("");
-}
-
 export class ChecklistShapeUtil extends BaseBoxShapeUtil<ChecklistShape> {
   static override type = CUSTOM_SHAPE_TYPES.checklist;
   static override props: RecordProps<ChecklistShape> = {
@@ -604,7 +592,7 @@ export class ChecklistShapeUtil extends BaseBoxShapeUtil<ChecklistShape> {
       h: 180,
       label: "Onboarding checklist",
       items: defaults.join("\n"),
-      checked: joinChecked(defaults.map(() => false)),
+      checked: defaults.map(() => "0").join(""),
     };
   }
   override getGeometry(shape: ChecklistShape) {
@@ -614,15 +602,16 @@ export class ChecklistShapeUtil extends BaseBoxShapeUtil<ChecklistShape> {
     return onResize(shape, info);
   }
   override component(shape: ChecklistShape) {
-    const items = splitItems(shape.props.items);
-    const flags = splitChecked(shape.props.checked);
+    const itemRows = parseChecklistItems(shape.props.items, shape.props.checked);
     const toggle = (idx: number) => {
-      const next = [...flags];
-      next[idx] = !next[idx];
+      const next = itemRows.map((r, i) => (i === idx ? { ...r, checked: !r.checked } : r));
       this.editor.updateShape<ChecklistShape>({
         id: shape.id,
         type: shape.type,
-        props: { checked: joinChecked(next) },
+        props: {
+          ...shape.props,
+          ...serializeChecklistItems(next),
+        },
       });
     };
     return (
@@ -644,7 +633,7 @@ export class ChecklistShapeUtil extends BaseBoxShapeUtil<ChecklistShape> {
           {shape.props.label}
         </div>
         <div style={{ flex: 1, overflow: "auto", padding: "0 18px 14px" }}>
-          {items.map((text, i) => (
+          {itemRows.map((row, i) => (
             <div
               key={i}
               style={{ display: "flex", alignItems: "center", gap: 10, padding: "6px 0" }}
@@ -658,10 +647,10 @@ export class ChecklistShapeUtil extends BaseBoxShapeUtil<ChecklistShape> {
                   width: 18,
                   height: 18,
                   borderRadius: 5,
-                  border: flags[i]
+                  border: row.checked
                     ? "1px solid #22d3ee"
                     : "1px solid rgba(255,255,255,0.3)",
-                  background: flags[i]
+                  background: row.checked
                     ? "linear-gradient(135deg,#22d3ee,#6c63ff)"
                     : "transparent",
                   display: "flex",
@@ -673,19 +662,19 @@ export class ChecklistShapeUtil extends BaseBoxShapeUtil<ChecklistShape> {
                   fontSize: 12,
                   flexShrink: 0,
                 }}
-                aria-pressed={flags[i] ? "true" : "false"}
+                aria-pressed={row.checked ? "true" : "false"}
               >
-                {flags[i] ? "✓" : ""}
+                {row.checked ? "✓" : ""}
               </button>
               <span
                 style={{
                   flex: 1,
                   fontSize: 14,
-                  color: flags[i] ? "rgba(255,255,255,0.45)" : "rgba(255,255,255,0.9)",
-                  textDecoration: flags[i] ? "line-through" : "none",
+                  color: row.checked ? "rgba(255,255,255,0.45)" : "rgba(255,255,255,0.9)",
+                  textDecoration: row.checked ? "line-through" : "none",
                 }}
               >
-                {text || <em style={{ opacity: 0.4 }}>Empty item</em>}
+                {row.item || <em style={{ opacity: 0.4 }}>Empty item</em>}
               </span>
             </div>
           ))}
@@ -2299,17 +2288,18 @@ const SOQL_KEYWORDS = [
   "FOR UPDATE",
 ];
 
+const SOQL_KEYWORD_RE = new RegExp(
+  `\\b(${SOQL_KEYWORDS.map((k) => k.replace(/\s+/g, "\\s+")).join("|")})\\b`,
+  "gi",
+);
+
 function highlightSoql(query: string): React.ReactNode {
   // Simple syntax highlighter: split on tokens we know about and wrap them
   // in spans. The non-matching parts stay as plain text.
   if (!query) return null;
-  const pattern = new RegExp(
-    `\\b(${SOQL_KEYWORDS.map((k) => k.replace(/\s+/g, "\\s+")).join("|")})\\b`,
-    "gi",
-  );
   const parts: React.ReactNode[] = [];
   let lastIdx = 0;
-  for (const m of query.matchAll(pattern)) {
+  for (const m of query.matchAll(SOQL_KEYWORD_RE)) {
     const start = m.index ?? 0;
     if (start > lastIdx) parts.push(query.slice(lastIdx, start));
     parts.push(

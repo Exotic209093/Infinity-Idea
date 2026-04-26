@@ -36,8 +36,6 @@ import {
   ShieldAlert,
   CheckCheck,
   ListChecks,
-  Square,
-  Circle,
   TrendingUp,
   Workflow,
   GitBranch,
