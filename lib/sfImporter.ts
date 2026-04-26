@@ -523,12 +523,16 @@ function extractApexMembers(src: string): ImportedApexMember[] {
   return members;
 }
 
+const MAX_SIGNATURE_LENGTH = 2000;
+
 const METHOD_RE =
   /(?:@[\w.]+(?:\([^)]*\))?\s*)*((?:\b(?:global|public|private|protected|static|virtual|abstract|override|final|webservice|testmethod)\s+)+)?([A-Za-z_][\w<>,\s.[\]]*?)?\s+([A-Za-z_][\w]*)\s*\(([^)]*)\)\s*$/;
 
 function parseApexMemberSignature(raw: string): ImportedApexMember | null {
   // Normalise whitespace to a single line so the regex can anchor on $.
   const flat = raw.replace(/\s+/g, " ").trim();
+  // Cap input length to prevent regex backtracking on pathological signatures.
+  if (flat.length > MAX_SIGNATURE_LENGTH) return null;
   const m = flat.match(METHOD_RE);
   if (!m) return null;
   const modifiersRaw = (m[1] ?? "").trim();

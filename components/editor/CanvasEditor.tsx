@@ -495,6 +495,17 @@ export function CanvasEditor() {
   const onUploadImage = useCallback(
     async (file: File) => {
       if (!editor) return;
+      // Images get inlined as base64 into the tldraw store, which means every
+      // save file carries them. Cap upload size so a stray 30 MB photo can't
+      // balloon the .infidoc.json silently.
+      const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
+      if (file.size > MAX_IMAGE_BYTES) {
+        pushToast(
+          `That image is ${(file.size / 1024 / 1024).toFixed(1)} MB; please use a file under ${MAX_IMAGE_BYTES / 1024 / 1024} MB.`,
+          "error",
+        );
+        return;
+      }
       try {
         await editor.putExternalContent({
           type: "files",

@@ -30,7 +30,7 @@ describe("parseSaveFile", () => {
       version: 1,
       createdAt: new Date().toISOString(),
       appName: "not-us",
-      snapshot: {},
+      snapshot: { store: {}, schema: {} },
     });
     expect(() => parseSaveFile(raw)).toThrow(InvalidSaveFileError);
   });
@@ -40,8 +40,27 @@ describe("parseSaveFile", () => {
       version: SAVE_FILE_VERSION + 1,
       createdAt: new Date().toISOString(),
       appName: "infinite-idea",
-      snapshot: {},
+      snapshot: { store: {}, schema: {} },
     });
     expect(() => parseSaveFile(raw)).toThrow(/newer version/i);
+  });
+
+  it("rejects a file containing a __proto__ key", () => {
+    // JSON.stringify silently drops "__proto__" keys, so craft the payload as
+    // a raw string to actually exercise the prototype-pollution guard.
+    const text =
+      '{"version":1,"createdAt":"2026-04-25T00:00:00Z","appName":"infinite-idea",' +
+      '"snapshot":{"store":{"foo":{"__proto__":{"polluted":true}}},"schema":{}}}';
+    expect(() => parseSaveFile(text)).toThrow(/unsupported keys/i);
+  });
+
+  it("rejects a snapshot missing the store/schema keys", () => {
+    const text = JSON.stringify({
+      version: 1,
+      createdAt: "2026-04-25T00:00:00Z",
+      appName: "infinite-idea",
+      snapshot: {},
+    });
+    expect(() => parseSaveFile(text)).toThrow(/doesn't look like a valid/i);
   });
 });
