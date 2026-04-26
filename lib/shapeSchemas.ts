@@ -16,7 +16,7 @@ import {
   type ParsedPermRow,
   type ParsedApprovalStep,
   type ParsedChecklistItem,
-} from "@/components/editor/shapes/customShapes";
+} from "@/components/editor/shapes/_parsers";
 import {
   CUSTOM_SHAPE_TYPES,
   SF_FIELD_TYPES,

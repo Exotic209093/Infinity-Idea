@@ -3,50 +3,79 @@
 import {
   BaseBoxShapeUtil,
   HTMLContainer,
-  Rectangle2d,
   T,
-  type Geometry2d,
   type RecordProps,
   type TLBaseShape,
   type TLResizeInfo,
-  resizeBox,
 } from "tldraw";
 import {
   CUSTOM_SHAPE_TYPES,
   SF_FIELD_FAMILIES,
-  SF_FIELD_TYPES,
   FLOW_ELEMENT_TYPES,
   FLOW_ELEMENT_COLOURS,
   FLOW_ELEMENT_LABEL,
   type FlowElementType,
-  type SFFieldType,
 } from "@/types/shapes";
+import { baseProps, baseGeometry, onResize } from "./_common";
+import {
+  blockShell,
+  numberBubble,
+  diamond,
+  avatar,
+  gateLabel,
+  withAlpha,
+  sobjectAccent,
+  flowGlyph,
+  FlagBadge,
+} from "./_styles";
+import {
+  parseChecklistItems,
+  serializeChecklistItems,
+  parseTable,
+  serializeTable,
+  parseSFFields,
+  serializeSFFields,
+  parseApexMembers,
+  serializeApexMembers,
+  parsePermRows,
+  serializePermRows,
+  parseApprovalSteps,
+  serializeApprovalSteps,
+  type ParsedChecklistItem,
+  type ParsedSFField,
+  type ParsedApexMember,
+  type ParsedPermRow,
+  type ParsedApprovalStep,
+} from "./_parsers";
+import { highlightSoql } from "./_soqlHighlight";
+
+export type {
+  ParsedChecklistItem,
+  ParsedSFField,
+  ParsedApexMember,
+  ParsedPermRow,
+  ParsedApprovalStep,
+};
+
+export {
+  parseChecklistItems,
+  serializeChecklistItems,
+  parseTable,
+  serializeTable,
+  parseSFFields,
+  serializeSFFields,
+  parseApexMembers,
+  serializeApexMembers,
+  parsePermRows,
+  serializePermRows,
+  parseApprovalSteps,
+  serializeApprovalSteps,
+};
 
 /*
  * Each custom shape is a self-contained, first-class tldraw shape:
  * selectable, resizable, connectable, undoable, serializable.
  */
-
-const baseProps = {
-  w: T.number,
-  h: T.number,
-  label: T.string,
-};
-
-function baseGeometry(shape: { props: { w: number; h: number } }): Geometry2d {
-  return new Rectangle2d({
-    width: shape.props.w,
-    height: shape.props.h,
-    isFilled: true,
-  });
-}
-
-function onResize<S extends TLBaseShape<string, { w: number; h: number }>>(
-  shape: S,
-  info: TLResizeInfo<S>,
-) {
-  return resizeBox(shape, info);
-}
 
 /* ---------- Process Step ---------- */
 
@@ -452,92 +481,6 @@ export class CalloutShapeUtil extends BaseBoxShapeUtil<CalloutShape> {
   }
 }
 
-/* ---------- Shared styles ---------- */
-
-function blockShell(
-  w: number,
-  h: number,
-  accent: string,
-): React.CSSProperties {
-  return {
-    width: w,
-    height: h,
-    borderRadius: 16,
-    background: "rgba(20,20,32,0.7)",
-    border: `1px solid ${withAlpha(accent, 0.4)}`,
-    boxShadow: `0 4px 20px ${withAlpha(accent, 0.18)}`,
-    color: "#fff",
-    overflow: "hidden",
-  };
-}
-
-function numberBubble(accent: string): React.CSSProperties {
-  return {
-    width: 36,
-    height: 36,
-    borderRadius: 999,
-    background: `linear-gradient(135deg, ${accent}, #ec4899)`,
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    fontWeight: 800,
-    color: "#fff",
-    flexShrink: 0,
-  };
-}
-
-function diamond(accent: string): React.CSSProperties {
-  return {
-    width: 18,
-    height: 18,
-    background: accent,
-    transform: "rotate(45deg)",
-    borderRadius: 3,
-    flexShrink: 0,
-  };
-}
-
-function avatar(accent: string): React.CSSProperties {
-  return {
-    width: 44,
-    height: 44,
-    borderRadius: 999,
-    background: `linear-gradient(135deg, ${accent}, #ec4899)`,
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    fontWeight: 800,
-    color: "#fff",
-    flexShrink: 0,
-    fontSize: 14,
-    letterSpacing: 0.5,
-  };
-}
-
-function gateLabel(side: "left" | "right"): React.CSSProperties {
-  return {
-    position: "absolute",
-    top: "50%",
-    [side]: -4,
-    transform: "translateY(-50%)",
-    fontSize: 11,
-    fontWeight: 700,
-    color: "rgba(255,255,255,0.8)",
-    background: "rgba(0,0,0,0.4)",
-    padding: "2px 8px",
-    borderRadius: 999,
-    pointerEvents: "none",
-  };
-}
-
-function withAlpha(hex: string, alpha: number): string {
-  const bigint = parseInt(hex.replace("#", ""), 16);
-  const r = (bigint >> 16) & 255;
-  const g = (bigint >> 8) & 255;
-  const b = bigint & 255;
-  return `rgba(${r},${g},${b},${alpha})`;
-}
-
 /* ---------- Checklist ---------- */
 
 export type ChecklistShape = TLBaseShape<
@@ -555,28 +498,11 @@ export type ChecklistShape = TLBaseShape<
  * Items and checked states are serialized as strings (newline-delimited items,
  * "1"/"0" flags) so the shape props remain primitive and round-trip cleanly.
  */
-export type ParsedChecklistItem = { item: string; checked: boolean };
 
 // If `checked` is shorter than the number of items (e.g., after a raw-text
 // edit creates new items but doesn't pad the flag string), the missing flags
 // default to `false` (unchecked). The "?? "0"" makes that explicit so callers
 // don't trip on `undefined === "1"` evaluating to `false` silently.
-export function parseChecklistItems(items: string, checked: string): ParsedChecklistItem[] {
-  if (!items) return [];
-  const itemList = items.split("\n");
-  const flagList = checked.split("");
-  return itemList.map((item, i) => ({
-    item,
-    checked: (flagList[i] ?? "0") === "1",
-  }));
-}
-
-export function serializeChecklistItems(rows: ParsedChecklistItem[]): { items: string; checked: string } {
-  return {
-    items: rows.map((r) => r.item).join("\n"),
-    checked: rows.map((r) => (r.checked ? "1" : "0")).join(""),
-  };
-}
 
 export class ChecklistShapeUtil extends BaseBoxShapeUtil<ChecklistShape> {
   static override type = CUSTOM_SHAPE_TYPES.checklist;
@@ -700,15 +626,6 @@ export type TableShape = TLBaseShape<
     cells: string;
   }
 >;
-
-export function parseTable(cells: string): string[][] {
-  if (!cells) return [];
-  return cells.split("\n").map((row) => row.split("\t"));
-}
-
-export function serializeTable(rows: string[][]): string {
-  return rows.map((row) => row.join("\t")).join("\n");
-}
 
 export class TableShapeUtil extends BaseBoxShapeUtil<TableShape> {
   static override type = CUSTOM_SHAPE_TYPES.table;
@@ -1048,108 +965,6 @@ export type SObjectShape = TLBaseShape<
   }
 >;
 
-export type ParsedSFField = {
-  name: string;
-  type: SFFieldType;
-  required: boolean;
-  unique: boolean;
-  externalId: boolean;
-  primaryKey: boolean;
-  pii: boolean;
-  encrypted: boolean;
-  indexed: boolean;
-  refTo: string;
-};
-
-// Tldraw re-invokes shape `component()` on every prop change, so a shape that
-// is being dragged reparses its raw text props per pointer move even though
-// the text itself didn't change. A simple string-keyed cache makes the lookup
-// constant-time across drags and re-renders. Entries are safe because tldraw
-// records are immutable; the same raw string always parses to the same value.
-function memoByString<T>(fn: (raw: string) => T, max = 512): (raw: string) => T {
-  const cache = new Map<string, T>();
-  return (raw: string) => {
-    const hit = cache.get(raw);
-    if (hit !== undefined) return hit;
-    const v = fn(raw);
-    if (cache.size >= max) cache.clear();
-    cache.set(raw, v);
-    return v;
-  };
-}
-
-export const parseSFFields = memoByString((raw: string): ParsedSFField[] =>
-  raw
-    .split("\n")
-    .map((line) => line.trim())
-    .filter(Boolean)
-    .map((line) => {
-      const [nameRaw = "", typeRaw = "text", flagsRaw = "", refToRaw = ""] =
-        line.split("|").map((p) => p.trim());
-      const type = (SF_FIELD_TYPES as readonly string[]).includes(typeRaw)
-        ? (typeRaw as SFFieldType)
-        : "text";
-      const flags = flagsRaw
-        .split(",")
-        .map((f) => f.trim().toLowerCase())
-        .filter(Boolean);
-      return {
-        name: nameRaw,
-        type,
-        required: flags.includes("req") || flags.includes("required"),
-        unique: flags.includes("unq") || flags.includes("unique"),
-        externalId: flags.includes("ext") || flags.includes("external-id"),
-        primaryKey: flags.includes("pk") || flags.includes("primary"),
-        pii: flags.includes("pii"),
-        encrypted: flags.includes("enc") || flags.includes("encrypted"),
-        indexed: flags.includes("idx") || flags.includes("indexed"),
-        refTo: refToRaw,
-      };
-    }));
-
-const SF_FLAG_ORDER: Array<keyof Pick<ParsedSFField, "required" | "unique" | "externalId" | "primaryKey" | "pii" | "encrypted" | "indexed">> = [
-  "required",
-  "unique",
-  "externalId",
-  "primaryKey",
-  "pii",
-  "encrypted",
-  "indexed",
-];
-
-const SF_FLAG_TOKEN: Record<typeof SF_FLAG_ORDER[number], string> = {
-  required: "req",
-  unique: "unq",
-  externalId: "ext",
-  primaryKey: "pk",
-  pii: "pii",
-  encrypted: "enc",
-  indexed: "idx",
-};
-
-export function serializeSFFields(rows: ParsedSFField[]): string {
-  return rows
-    .map((f) => {
-      const flags = SF_FLAG_ORDER.filter((k) => f[k]).map((k) => SF_FLAG_TOKEN[k]).join(",");
-      return [f.name, f.type, flags, f.refTo].join(" | ");
-    })
-    .join("\n");
-}
-
-function sobjectAccent(type: SObjectShape["props"]["sobjectType"]): string {
-  switch (type) {
-    case "custom":
-      return "#ec4899";
-    case "external":
-      return "#f59e0b";
-    case "platform":
-      return "#22d3ee";
-    case "standard":
-    default:
-      return "#8b5cf6";
-  }
-}
-
 export class SObjectShapeUtil extends BaseBoxShapeUtil<SObjectShape> {
   static override type = CUSTOM_SHAPE_TYPES.sobject;
   static override props: RecordProps<SObjectShape> = {
@@ -1362,38 +1177,6 @@ export class SObjectShapeUtil extends BaseBoxShapeUtil<SObjectShape> {
   }
 }
 
-function FlagBadge({
-  children,
-  tone,
-}: {
-  children: React.ReactNode;
-  tone?: "default" | "pink" | "cyan" | "amber";
-}) {
-  const palette: Record<string, { bg: string; fg: string }> = {
-    default: { bg: "rgba(255,255,255,0.08)", fg: "rgba(255,255,255,0.7)" },
-    pink: { bg: "rgba(236,72,153,0.18)", fg: "#fbcfe8" },
-    cyan: { bg: "rgba(34,211,238,0.18)", fg: "#a5f3fc" },
-    amber: { bg: "rgba(245,158,11,0.18)", fg: "#fde68a" },
-  };
-  const p = palette[tone ?? "default"];
-  return (
-    <span
-      style={{
-        fontSize: 9,
-        padding: "1px 5px",
-        borderRadius: 4,
-        background: p.bg,
-        color: p.fg,
-        fontWeight: 700,
-        textTransform: "uppercase",
-        letterSpacing: 0.4,
-      }}
-    >
-      {children}
-    </span>
-  );
-}
-
 /* ---------- Apex Class ---------- */
 
 export type ApexClassShape = TLBaseShape<
@@ -1411,35 +1194,6 @@ export type ApexClassShape = TLBaseShape<
     members: string;
   }
 >;
-
-export type ParsedApexMember = {
-  signature: string;
-  modifiers: string[];
-};
-
-export const parseApexMembers = memoByString(
-  (raw: string): ParsedApexMember[] =>
-    raw
-      .split("\n")
-      .map((line) => line.trim())
-      .filter(Boolean)
-      .map((line) => {
-        const [sigRaw = "", modsRaw = ""] = line.split("|").map((p) => p.trim());
-        return {
-          signature: sigRaw,
-          modifiers: modsRaw
-            .split(",")
-            .map((m) => m.trim().toLowerCase())
-            .filter(Boolean),
-        };
-      }),
-);
-
-export function serializeApexMembers(rows: ParsedApexMember[]): string {
-  return rows
-    .map((m) => [m.signature, m.modifiers.join(", ")].join(" | "))
-    .join("\n");
-}
 
 export class ApexClassShapeUtil extends BaseBoxShapeUtil<ApexClassShape> {
   static override type = CUSTOM_SHAPE_TYPES.apexClass;
@@ -1732,24 +1486,6 @@ export class FlowElementShapeUtil extends BaseBoxShapeUtil<FlowElementShape> {
   }
 }
 
-function flowGlyph(type: FlowElementType): string {
-  switch (type) {
-    case "start": return "▶";
-    case "end": return "■";
-    case "screen": return "⌘";
-    case "decision": return "◆";
-    case "assignment": return "=";
-    case "createRecord": return "+";
-    case "updateRecord": return "✎";
-    case "deleteRecord": return "×";
-    case "getRecords": return "⎙";
-    case "action": return "⚡";
-    case "loop": return "↻";
-    case "subflow": return "↘";
-    default: return "·";
-  }
-}
-
 /* ---------- Permission Matrix ---------- */
 
 export type PermissionMatrixShape = TLBaseShape<
@@ -1764,49 +1500,6 @@ export type PermissionMatrixShape = TLBaseShape<
     rows: string;
   }
 >;
-
-export type ParsedPermRow = {
-  object: string;
-  create: boolean;
-  read: boolean;
-  update: boolean;
-  del: boolean;
-  modifyAll: boolean;
-};
-
-function truthy(v: string): boolean {
-  const s = v.trim().toLowerCase();
-  return s === "1" || s === "y" || s === "yes" || s === "✓" || s === "true";
-}
-
-export const parsePermRows = memoByString(
-  (raw: string): ParsedPermRow[] =>
-    raw
-      .split("\n")
-      .map((l) => l.trim())
-      .filter(Boolean)
-      .map((line) => {
-        const cells = line.split("|").map((c) => c.trim());
-        const [obj = "", c = "0", r = "0", u = "0", d = "0", x = "0"] = cells;
-        return {
-          object: obj,
-          create: truthy(c),
-          read: truthy(r),
-          update: truthy(u),
-          del: truthy(d),
-          modifyAll: truthy(x),
-        };
-      }),
-);
-
-export function serializePermRows(rows: ParsedPermRow[]): string {
-  const bit = (b: boolean) => (b ? "1" : "0");
-  return rows
-    .map((r) =>
-      [r.object, bit(r.create), bit(r.read), bit(r.update), bit(r.del), bit(r.modifyAll)].join(" | "),
-    )
-    .join("\n");
-}
 
 export class PermissionMatrixShapeUtil extends BaseBoxShapeUtil<PermissionMatrixShape> {
   static override type = CUSTOM_SHAPE_TYPES.permissionMatrix;
@@ -2260,59 +1953,6 @@ export type SOQLQueryShape = TLBaseShape<
   }
 >;
 
-const SOQL_KEYWORDS = [
-  "SELECT",
-  "FROM",
-  "WHERE",
-  "AND",
-  "OR",
-  "NOT",
-  "LIKE",
-  "IN",
-  "NULL",
-  "NOT NULL",
-  "ORDER BY",
-  "GROUP BY",
-  "HAVING",
-  "LIMIT",
-  "OFFSET",
-  "ASC",
-  "DESC",
-  "NULLS FIRST",
-  "NULLS LAST",
-  "TRUE",
-  "FALSE",
-  "WITH",
-  "FOR VIEW",
-  "FOR REFERENCE",
-  "FOR UPDATE",
-];
-
-const SOQL_KEYWORD_RE = new RegExp(
-  `\\b(${SOQL_KEYWORDS.map((k) => k.replace(/\s+/g, "\\s+")).join("|")})\\b`,
-  "gi",
-);
-
-function highlightSoql(query: string): React.ReactNode {
-  // Simple syntax highlighter: split on tokens we know about and wrap them
-  // in spans. The non-matching parts stay as plain text.
-  if (!query) return null;
-  const parts: React.ReactNode[] = [];
-  let lastIdx = 0;
-  for (const m of query.matchAll(SOQL_KEYWORD_RE)) {
-    const start = m.index ?? 0;
-    if (start > lastIdx) parts.push(query.slice(lastIdx, start));
-    parts.push(
-      <span key={`${start}-${m[0]}`} style={{ color: "#a78bfa", fontWeight: 700 }}>
-        {m[0]}
-      </span>,
-    );
-    lastIdx = start + m[0].length;
-  }
-  if (lastIdx < query.length) parts.push(query.slice(lastIdx));
-  return parts;
-}
-
 export class SOQLQueryShapeUtil extends BaseBoxShapeUtil<SOQLQueryShape> {
   static override type = CUSTOM_SHAPE_TYPES.soqlQuery;
   static override props: RecordProps<SOQLQueryShape> = {
@@ -2656,35 +2296,6 @@ export type ApprovalProcessShape = TLBaseShape<
     steps: string;
   }
 >;
-
-export type ParsedApprovalStep = {
-  name: string;
-  approver: string;
-  criteria: string;
-};
-
-export const parseApprovalSteps = memoByString(
-  (raw: string): ParsedApprovalStep[] =>
-    raw
-      .split("\n")
-      .map((l) => l.trim())
-      .filter(Boolean)
-      .map((line) => {
-        // Take the first two pipe-separated tokens as name/approver, then
-        // rejoin the remainder as criteria so embedded pipes (`|`) survive
-        // round-trip. Single-pipe and zero-pipe inputs work the same as before.
-        const parts = line.split("|").map((p) => p.trim());
-        const [name = "", approver = "", ...rest] = parts;
-        const criteria = rest.join(" | ");
-        return { name, approver, criteria };
-      }),
-);
-
-export function serializeApprovalSteps(rows: ParsedApprovalStep[]): string {
-  return rows
-    .map((s) => [s.name, s.approver, s.criteria].join(" | "))
-    .join("\n");
-}
 
 export class ApprovalProcessShapeUtil extends BaseBoxShapeUtil<ApprovalProcessShape> {
   static override type = CUSTOM_SHAPE_TYPES.approvalProcess;
