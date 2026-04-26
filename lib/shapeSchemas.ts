@@ -62,6 +62,19 @@ const SF_FLAG_OPTIONS = [
   { key: "idx", label: "Indexed" },
 ] as const;
 
+// Reverse map: flag token (as stored in serialized text) → boolean property
+// on ParsedSFField. Adding a new flag means adding it here AND to
+// SF_FLAG_OPTIONS, so both ends of the round-trip stay in sync.
+const SF_FLAG_FIELD: Record<string, keyof Pick<ParsedSFField, "required" | "unique" | "externalId" | "primaryKey" | "pii" | "encrypted" | "indexed">> = {
+  req: "required",
+  unq: "unique",
+  ext: "externalId",
+  pk: "primaryKey",
+  pii: "pii",
+  enc: "encrypted",
+  idx: "indexed",
+};
+
 const APEX_MOD_OPTIONS = [
   { key: "public", label: "public" },
   { key: "global", label: "global" },
@@ -89,18 +102,7 @@ const sobjectSchema: ColumnSchema = {
     return parseSFFields(raw).map<Row>((f) => ({
       name: f.name,
       type: f.type,
-      flags: SF_FLAG_OPTIONS.filter((o) => {
-        switch (o.key) {
-          case "req": return f.required;
-          case "unq": return f.unique;
-          case "ext": return f.externalId;
-          case "pk":  return f.primaryKey;
-          case "pii": return f.pii;
-          case "enc": return f.encrypted;
-          case "idx": return f.indexed;
-          default: return false;
-        }
-      }).map((o) => o.key),
+      flags: SF_FLAG_OPTIONS.filter((o) => f[SF_FLAG_FIELD[o.key]]).map((o) => o.key),
       refTo: f.refTo,
     }));
   },

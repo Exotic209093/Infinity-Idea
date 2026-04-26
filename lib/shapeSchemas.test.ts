@@ -53,6 +53,20 @@ describe("shapeSchemas round-trip", () => {
     expect(schema.parse(schema.serialize(rows))).toEqual(rows);
   });
 
+  it("table: pads ragged rows on parse so all rows are rectangular", () => {
+    const schema = SCHEMAS[CUSTOM_SHAPE_TYPES.table];
+    // Row 0 has 3 cells, row 1 has 1, row 2 has 2 — width should be 3.
+    const parsed = schema.parse({ cells: "A\tB\tC\nD\nE\tF" });
+    expect(parsed).toEqual([
+      { "0": "A", "1": "B", "2": "C" },
+      { "0": "D", "1": "", "2": "" },
+      { "0": "E", "1": "F", "2": "" },
+    ]);
+    // After serializing the padded rows we get a rectangular grid string.
+    const round = schema.parse(schema.serialize(parsed));
+    expect(round).toEqual(parsed);
+  });
+
   it("checklist: round-trips item text + checked state", () => {
     const schema = SCHEMAS[CUSTOM_SHAPE_TYPES.checklist];
     const rows = [
