@@ -70,6 +70,8 @@ import {
 } from "@/components/ui/CommandPalette";
 import { WelcomeDialog } from "@/components/ui/WelcomeDialog";
 import { TourOverlay, type TourStep } from "@/components/ui/TourOverlay";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
+import { PromptDialog } from "@/components/ui/PromptDialog";
 import {
   type ImportedApex,
   type ImportedFlow,
@@ -130,6 +132,8 @@ export function CanvasEditor() {
   const [toolboxCollapsed, setToolboxCollapsed] = useState(false);
   const [welcomeOpen, setWelcomeOpen] = useState(false);
   const [tourOpen, setTourOpen] = useState(false);
+  const [confirmNewOpen, setConfirmNewOpen] = useState(false);
+  const [saveBlockOpen, setSaveBlockOpen] = useState(false);
   const [inspectorPinned, setInspectorPinned] = useState<boolean>(() => {
     if (typeof window === "undefined") return false;
     try {
@@ -259,14 +263,17 @@ export function CanvasEditor() {
 
   const onNew = useCallback(() => {
     if (!editor) return;
-    const shapes = Array.from(editor.getCurrentPageShapeIds());
-    if (shapes.length > 0) {
-      const ok = window.confirm(
-        "Start a new document? Any unsaved work will be lost.",
-      );
-      if (!ok) return;
-      editor.deleteShapes(shapes);
+    if (editor.getCurrentPageShapeIds().size > 0) {
+      setConfirmNewOpen(true);
+    } else {
+      pushToast("New canvas", "success");
     }
+  }, [editor, pushToast]);
+
+  const confirmNew = useCallback(() => {
+    if (!editor) return;
+    const shapes = Array.from(editor.getCurrentPageShapeIds());
+    if (shapes.length > 0) editor.deleteShapes(shapes);
     pushToast("New canvas", "success");
   }, [editor, pushToast]);
 
@@ -530,18 +537,24 @@ export function CanvasEditor() {
       pushToast("Select something first", "error");
       return;
     }
-    const name = window.prompt("Name this block", "Untitled block");
-    if (!name) return;
-    const block = buildBlockFromSelection(editor, name.trim() || "Untitled block");
-    if (!block) {
-      pushToast("Nothing to save", "error");
-      return;
-    }
-    const existing = loadSavedBlocks();
-    saveBlocks([block, ...existing]);
-    setSavedBlocksVersion((v) => v + 1);
-    pushToast(`Saved "${block.name}" to your blocks`, "success");
+    setSaveBlockOpen(true);
   }, [editor, pushToast]);
+
+  const finishSaveAsBlock = useCallback(
+    (name: string) => {
+      if (!editor) return;
+      const block = buildBlockFromSelection(editor, name || "Untitled block");
+      if (!block) {
+        pushToast("Nothing to save", "error");
+        return;
+      }
+      const existing = loadSavedBlocks();
+      saveBlocks([block, ...existing]);
+      setSavedBlocksVersion((v) => v + 1);
+      pushToast(`Saved "${block.name}" to your blocks`, "success");
+    },
+    [editor, pushToast],
+  );
 
   const onImportSObject = useCallback(
     (objects: ImportedSObject[], rels: ImportedRelationship[]) => {
@@ -1026,6 +1039,30 @@ export function CanvasEditor() {
           open={tourOpen}
           steps={tourSteps}
           onClose={() => setTourOpen(false)}
+        />
+      )}
+
+      {confirmNewOpen && (
+        <ConfirmDialog
+          open={confirmNewOpen}
+          onClose={() => setConfirmNewOpen(false)}
+          onConfirm={confirmNew}
+          title="Start a new document?"
+          body="Any unsaved work will be lost."
+          confirmLabel="Start over"
+          destructive
+        />
+      )}
+
+      {saveBlockOpen && (
+        <PromptDialog
+          open={saveBlockOpen}
+          onClose={() => setSaveBlockOpen(false)}
+          onSubmit={finishSaveAsBlock}
+          title="Save as block"
+          label="Block name"
+          defaultValue="Untitled block"
+          submitLabel="Save block"
         />
       )}
 

@@ -1,6 +1,8 @@
 "use client";
 
 import { memo, useEffect, useRef, useState } from "react";
+import { ConfirmDialog } from "./ConfirmDialog";
+import { PromptDialog } from "./PromptDialog";
 import {
   getIndexAbove,
   getIndexBelow,
@@ -55,6 +57,8 @@ export const PagesBar = memo(function PagesBar({
   const [menuOpen, setMenuOpen] = useState(false);
   const [dragFrom, setDragFrom] = useState<number | null>(null);
   const [dragOver, setDragOver] = useState<number | null>(null);
+  const [deletePageOpen, setDeletePageOpen] = useState(false);
+  const [renameOpen, setRenameOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
   // Only re-render when pages or the current page id actually change. The
@@ -110,16 +114,18 @@ export const PagesBar = memo(function PagesBar({
     if (created) go(created.id);
   };
 
-  const renameCurrent = () => {
-    const next = window.prompt("Rename page", current.name);
-    if (!next || next.trim() === current.name) return;
+  const renameCurrent = () => setRenameOpen(true);
+  const finishRename = (next: string) => {
+    if (next === current.name) return;
     editor.markHistoryStoppingPoint("rename-page");
-    editor.renamePage(current.id, next.trim());
+    editor.renamePage(current.id, next);
   };
 
   const deleteCurrent = () => {
     if (pages.length <= 1) return;
-    if (!window.confirm(`Delete "${current.name}"? This can't be undone.`)) return;
+    setDeletePageOpen(true);
+  };
+  const confirmDeleteCurrent = () => {
     editor.markHistoryStoppingPoint("delete-page");
     editor.deletePage(current.id);
     setMenuOpen(false);
@@ -334,6 +340,30 @@ export const PagesBar = memo(function PagesBar({
           <Plus size={14} />
         </button>
       </div>
+
+      {deletePageOpen && (
+        <ConfirmDialog
+          open={deletePageOpen}
+          onClose={() => setDeletePageOpen(false)}
+          onConfirm={confirmDeleteCurrent}
+          title={`Delete "${current.name}"?`}
+          body="This can't be undone."
+          confirmLabel="Delete page"
+          destructive
+        />
+      )}
+
+      {renameOpen && (
+        <PromptDialog
+          open={renameOpen}
+          onClose={() => setRenameOpen(false)}
+          onSubmit={finishRename}
+          title="Rename page"
+          label="Page name"
+          defaultValue={current.name}
+          submitLabel="Rename"
+        />
+      )}
     </div>
   );
 });
