@@ -50,3 +50,51 @@ describe("<StructuredEditor> rendering", () => {
     expect(onOpenFull).toHaveBeenCalledTimes(1);
   });
 });
+
+describe("<StructuredEditor> mutations", () => {
+  it("typing into a text cell calls onChange with a serialized patch", () => {
+    const schema = SCHEMAS[CUSTOM_SHAPE_TYPES.permissionMatrix];
+    const onChange = vi.fn();
+    render(
+      <StructuredEditor
+        mode="full"
+        schema={schema}
+        shapeProps={{ rows: "Account | 1 | 0 | 0 | 0 | 0" }}
+        onChange={onChange}
+      />,
+    );
+    fireEvent.change(screen.getByDisplayValue("Account"), { target: { value: "Lead" } });
+    expect(onChange).toHaveBeenCalledWith({ rows: "Lead | 1 | 0 | 0 | 0 | 0" });
+  });
+
+  it("clicking Add row appends an empty row", () => {
+    const schema = SCHEMAS[CUSTOM_SHAPE_TYPES.checklist];
+    const onChange = vi.fn();
+    render(
+      <StructuredEditor
+        mode="full"
+        schema={schema}
+        shapeProps={{ items: "a", checked: "0" }}
+        onChange={onChange}
+      />,
+    );
+    fireEvent.click(screen.getByRole("button", { name: /add row/i }));
+    expect(onChange).toHaveBeenCalledWith({ items: "a\n", checked: "00" });
+  });
+
+  it("clicking Delete row removes the row", () => {
+    const schema = SCHEMAS[CUSTOM_SHAPE_TYPES.checklist];
+    const onChange = vi.fn();
+    render(
+      <StructuredEditor
+        mode="full"
+        schema={schema}
+        shapeProps={{ items: "a\nb", checked: "10" }}
+        onChange={onChange}
+      />,
+    );
+    const deleteButtons = screen.getAllByRole("button", { name: /delete row/i });
+    fireEvent.click(deleteButtons[0]);
+    expect(onChange).toHaveBeenCalledWith({ items: "b", checked: "0" });
+  });
+});

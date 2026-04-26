@@ -35,13 +35,48 @@ export function StructuredEditor({ mode, schema, shapeProps, onChange, onOpenFul
   const showHeaders = mode === "full" || columns.length > 2;
   const compact = mode === "compact";
 
-  // Mutations are stubbed in Task 4 — Task 5 wires them up.
-  const setCell = (_rowIdx: number, _key: string, _value: unknown) => { /* Task 5 */ };
-  const addRow = () => { /* Task 5 */ };
-  const removeRow = (_rowIdx: number) => { /* Task 5 */ };
+  const [dragFrom, setDragFrom] = useState<number | null>(null);
 
-  // Quiet TS about the unused stubs and onChange/setRows until Task 5.
-  void setCell; void addRow; void removeRow; void onChange; void setRows;
+  const onDragStart = (i: number) => (e: React.DragEvent) => {
+    setDragFrom(i);
+    e.dataTransfer.effectAllowed = "move";
+  };
+  const onDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "move";
+  };
+  const onDrop = (i: number) => () => {
+    if (dragFrom === null || dragFrom === i) {
+      setDragFrom(null);
+      return;
+    }
+    const next = [...rows];
+    const [moved] = next.splice(dragFrom, 1);
+    next.splice(i, 0, moved);
+    flush(next);
+    setDragFrom(null);
+  };
+
+  const flush = (next: Row[]) => {
+    setRows(next);
+    onChange(schema.serialize(next));
+  };
+
+  const setCell = (rowIdx: number, key: string, value: unknown) => {
+    const next = rows.map((r, i) => (i === rowIdx ? { ...r, [key]: value } : r));
+    flush(next);
+  };
+
+  // For dynamic-column shapes (Table), pad the new row with empty strings up
+  // to the current column count so the editor doesn't render a zero-column row.
+  const addRow = () => {
+    const fresh: Row = schema.dynamicColumns
+      ? Object.fromEntries(columns.map((c) => [c.key, ""]))
+      : schema.emptyRow();
+    flush([...rows, fresh]);
+  };
+
+  const removeRow = (rowIdx: number) => flush(rows.filter((_, i) => i !== rowIdx));
 
   return (
     <div className={compact ? "flex flex-col gap-1" : "flex flex-col gap-3"}>
@@ -61,14 +96,22 @@ export function StructuredEditor({ mode, schema, shapeProps, onChange, onOpenFul
 
       <div className={compact ? "max-h-56 overflow-y-auto pr-1" : ""}>
         {rows.map((row, rowIdx) => (
-          <div key={rowIdx} className={`flex items-center gap-1 ${compact ? "py-0.5" : "py-1.5"}`}>
+          <div
+            key={rowIdx}
+            draggable
+            onDragStart={onDragStart(rowIdx)}
+            onDragOver={onDragOver}
+            onDrop={onDrop(rowIdx)}
+            onDragEnd={() => setDragFrom(null)}
+            className={`flex items-center gap-1 ${compact ? "py-0.5" : "py-1.5"} ${dragFrom === rowIdx ? "opacity-50" : ""}`}
+          >
             <GripVertical size={12} className="text-white/30" />
             {columns.map((c) => (
               <div key={c.key} className={widthClass(c.width)}>
                 <CellInput
                   column={c}
                   value={row[c.key]}
-                  onChange={() => { /* Task 5 */ }}
+                  onChange={(next) => setCell(rowIdx, c.key, next)}
                   compact={compact}
                 />
               </div>
