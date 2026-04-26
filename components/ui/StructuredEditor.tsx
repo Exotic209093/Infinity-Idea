@@ -128,7 +128,10 @@ export function StructuredEditor({ mode, schema, shapeProps, onChange, onOpenFul
         </div>
       )}
 
-      <div className={compact ? "max-h-56 overflow-y-auto pr-1" : ""}>
+      <div
+        className={compact ? "max-h-56 overflow-y-auto pr-1" : ""}
+        onBlur={flushPending}
+      >
         {rows.map((row, rowIdx) => (
           // We key by index rather than a stable id. Inputs are fully controlled
           // (value comes from row[c.key]), so React re-applies the right value
@@ -145,7 +148,6 @@ export function StructuredEditor({ mode, schema, shapeProps, onChange, onOpenFul
             onDragOver={onDragOver}
             onDrop={onDrop(rowIdx)}
             onDragEnd={() => setDragFrom(null)}
-            onBlur={flushPending}
             className={`flex items-center gap-1 ${compact ? "py-0.5" : "py-1.5"} ${dragFrom === rowIdx ? "opacity-50" : ""}`}
           >
             <GripVertical size={12} className="text-white/30" />

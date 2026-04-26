@@ -666,12 +666,12 @@ function SelectField({
 
 function schemaDialogTitle(type: string): string {
   switch (type) {
-    case "sobject": return "Edit fields";
-    case "apexClass": return "Edit members";
-    case "permissionMatrix": return "Edit permissions";
-    case "approvalProcess": return "Edit approval steps";
-    case "checklist": return "Edit checklist";
-    case "table": return "Edit table";
-    default: return "Edit";
+    case CUSTOM_SHAPE_TYPES.sobject:          return "Edit fields";
+    case CUSTOM_SHAPE_TYPES.apexClass:        return "Edit members";
+    case CUSTOM_SHAPE_TYPES.permissionMatrix: return "Edit permissions";
+    case CUSTOM_SHAPE_TYPES.approvalProcess:  return "Edit approval steps";
+    case CUSTOM_SHAPE_TYPES.checklist:        return "Edit checklist";
+    case CUSTOM_SHAPE_TYPES.table:            return "Edit table";
+    default:                                  return "Edit";
   }
 }
