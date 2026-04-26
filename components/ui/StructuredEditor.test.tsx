@@ -105,6 +105,36 @@ describe("<StructuredEditor> mutations", () => {
   });
 });
 
+describe("<StructuredEditor> external sync", () => {
+  it("resyncs rows when shapeProps changes from outside", () => {
+    const schema = SCHEMAS[CUSTOM_SHAPE_TYPES.checklist];
+    const onChange = vi.fn();
+    const { rerender } = render(
+      <StructuredEditor
+        mode="full"
+        schema={schema}
+        shapeProps={{ items: "a\nb", checked: "10" }}
+        onChange={onChange}
+      />,
+    );
+    expect(screen.getAllByRole("textbox").length).toBeGreaterThanOrEqual(2);
+    expect(screen.getByDisplayValue("a")).toBeInTheDocument();
+
+    // Simulate an external update (different shapeProps reference + content).
+    rerender(
+      <StructuredEditor
+        mode="full"
+        schema={schema}
+        shapeProps={{ items: "x\ny\nz", checked: "010" }}
+        onChange={onChange}
+      />,
+    );
+    expect(screen.getByDisplayValue("x")).toBeInTheDocument();
+    expect(screen.getByDisplayValue("y")).toBeInTheDocument();
+    expect(screen.getByDisplayValue("z")).toBeInTheDocument();
+  });
+});
+
 describe("<StructuredEditor> debounce", () => {
   it("rapid typing produces one onChange after the idle window", () => {
     vi.useFakeTimers();

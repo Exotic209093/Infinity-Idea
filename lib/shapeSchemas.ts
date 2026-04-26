@@ -228,7 +228,6 @@ const tableSchema: ColumnSchema = {
   emptyRow: () => ({}),
   parse: (props) => {
     const raw = String(props.cells ?? "");
-    if (!raw) return [];
     const grid = parseTable(raw);
     if (grid.length === 0) return [];
     const cols = Math.max(...grid.map((r) => r.length));

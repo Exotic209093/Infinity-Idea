@@ -43,6 +43,15 @@ describe("shapeSchemas round-trip", () => {
     expect(schema.parse(schema.serialize(rows))).toEqual(rows);
   });
 
+  it("approvalProcess: preserves pipe characters in criteria", () => {
+    const schema = SCHEMAS[CUSTOM_SHAPE_TYPES.approvalProcess];
+    const rows = [
+      { name: "Manager review", approver: "Manager", criteria: 'Status = "Open" | Status = "Review"' },
+      { name: "Final", approver: "VP", criteria: "" },
+    ];
+    expect(schema.parse(schema.serialize(rows))).toEqual(rows);
+  });
+
   it("table: round-trips with rectangular rows", () => {
     const schema = SCHEMAS[CUSTOM_SHAPE_TYPES.table];
     const rows = [

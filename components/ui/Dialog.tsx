@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { X } from "lucide-react";
 
@@ -21,6 +21,7 @@ export function Dialog({
   children,
   widthClass = "max-w-3xl",
 }: Props) {
+  const titleId = useId();
   const cardRef = useRef<HTMLDivElement>(null);
 
   // Portals must mount to a real DOM node; SSR (where document is undefined)
@@ -55,7 +56,7 @@ export function Dialog({
       }}
       role="dialog"
       aria-modal="true"
-      aria-labelledby="dialog-title"
+      aria-labelledby={titleId}
     >
       <div
         ref={cardRef}
@@ -64,7 +65,7 @@ export function Dialog({
       >
         <div className="flex items-start justify-between gap-4 border-b border-white/10 px-6 py-4">
           <div>
-            <h2 id="dialog-title" className="text-base font-bold">
+            <h2 id={titleId} className="text-base font-bold">
               {title}
             </h2>
             {subtitle && (

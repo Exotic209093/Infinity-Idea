@@ -540,7 +540,10 @@ function ShapeFields({
       )}
 
       {schema && (
-        <>
+        <section
+          role="region"
+          aria-label={schemaDialogTitle(shape.type).replace(/^Edit /, "")}
+        >
           <StructuredEditor
             mode="compact"
             schema={schema}
@@ -558,7 +561,7 @@ function ShapeFields({
               onChange={update}
             />
           )}
-        </>
+        </section>
       )}
 
       <div className="mt-2 border-t border-white/10 pt-3 text-[11px] uppercase tracking-wider text-white/40">

@@ -46,6 +46,21 @@ export function StructuredEditor({ mode, schema, shapeProps, onChange, onOpenFul
     onChangeRef.current = onChange;
   });
 
+  // External-edit reconciliation. When `shapeProps` references change, we
+  // re-parse and compare with current `rows`. If they differ, an external
+  // write happened (e.g. the popout dialog flushed while the compact editor
+  // is also mounted) and we accept the new state. JSON-equal compare on the
+  // SERIALISED form keeps it stable across flag-array reorderings etc.
+  useEffect(() => {
+    const fromProps = schema.parse(shapeProps);
+    const fromPropsKey = JSON.stringify(schema.serialize(fromProps));
+    const localKey = JSON.stringify(schema.serialize(rows));
+    if (fromPropsKey !== localKey) setRows(fromProps);
+    // `rows` deliberately omitted from deps — we only resync when shapeProps
+    // (the external source of truth) ticks, not on every local edit.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [shapeProps, schema]);
+
   const cancelDebounce = () => {
     if (debounceRef.current) {
       clearTimeout(debounceRef.current);
@@ -89,6 +104,18 @@ export function StructuredEditor({ mode, schema, shapeProps, onChange, onOpenFul
   };
 
   const removeRow = (rowIdx: number) => flush(rows.filter((_, i) => i !== rowIdx));
+
+  // Only meaningful for dynamicColumns shapes (Table). Pads each existing row
+  // with one new empty column at the end, so the next column-count inference
+  // picks up an extra column.
+  const addColumn = () => {
+    if (!schema.dynamicColumns) return;
+    const newKey = String(columns.length);
+    const next = rows.length === 0
+      ? [{ [newKey]: "" } as Row]
+      : rows.map((r) => ({ ...r, [newKey]: "" }));
+    flush(next);
+  };
 
   const [dragFrom, setDragFrom] = useState<number | null>(null);
 
@@ -150,7 +177,15 @@ export function StructuredEditor({ mode, schema, shapeProps, onChange, onOpenFul
             onDragEnd={() => setDragFrom(null)}
             className={`flex items-center gap-1 ${compact ? "py-0.5" : "py-1.5"} ${dragFrom === rowIdx ? "opacity-50" : ""}`}
           >
-            <GripVertical size={12} className="text-white/30" />
+            <span
+              className="cursor-grab text-white/30"
+              role="button"
+              tabIndex={-1}
+              aria-label="Drag to reorder"
+              title="Drag to reorder"
+            >
+              <GripVertical size={12} />
+            </span>
             {columns.map((c) => (
               <div key={c.key} className={widthClass(c.width)}>
                 <CellInput
@@ -174,13 +209,24 @@ export function StructuredEditor({ mode, schema, shapeProps, onChange, onOpenFul
       </div>
 
       <div className="flex items-center justify-between gap-2 pt-1">
-        <button
-          type="button"
-          className="btn-ghost flex items-center gap-1 rounded px-2 py-1 text-xs"
-          onClick={addRow}
-        >
-          <Plus size={12} /> Add row
-        </button>
+        <div className="flex items-center gap-1">
+          <button
+            type="button"
+            className="btn-ghost flex items-center gap-1 rounded px-2 py-1 text-xs"
+            onClick={addRow}
+          >
+            <Plus size={12} /> Add row
+          </button>
+          {schema.dynamicColumns && (
+            <button
+              type="button"
+              className="btn-ghost flex items-center gap-1 rounded px-2 py-1 text-xs"
+              onClick={addColumn}
+            >
+              <Plus size={12} /> Add column
+            </button>
+          )}
+        </div>
         {compact && onOpenFull && (
           <button
             type="button"

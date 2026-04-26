@@ -713,6 +713,7 @@ export type TableShape = TLBaseShape<
 >;
 
 export function parseTable(cells: string): string[][] {
+  if (!cells) return [];
   return cells.split("\n").map((row) => row.split("\t"));
 }
 
@@ -2679,9 +2680,12 @@ export const parseApprovalSteps = memoByString(
       .map((l) => l.trim())
       .filter(Boolean)
       .map((line) => {
-        const [name = "", approver = "", criteria = ""] = line
-          .split("|")
-          .map((p) => p.trim());
+        // Take the first two pipe-separated tokens as name/approver, then
+        // rejoin the remainder as criteria so embedded pipes (`|`) survive
+        // round-trip. Single-pipe and zero-pipe inputs work the same as before.
+        const parts = line.split("|").map((p) => p.trim());
+        const [name = "", approver = "", ...rest] = parts;
+        const criteria = rest.join(" | ");
         return { name, approver, criteria };
       }),
 );
