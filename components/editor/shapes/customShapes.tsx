@@ -557,12 +557,17 @@ export type ChecklistShape = TLBaseShape<
  */
 export type ParsedChecklistItem = { item: string; checked: boolean };
 
+// If `checked` is shorter than the number of items (e.g., after a raw-text
+// edit creates new items but doesn't pad the flag string), the missing flags
+// default to `false` (unchecked). The "?? "0"" makes that explicit so callers
+// don't trip on `undefined === "1"` evaluating to `false` silently.
 export function parseChecklistItems(items: string, checked: string): ParsedChecklistItem[] {
+  if (!items) return [];
   const itemList = items.split("\n");
   const flagList = checked.split("");
   return itemList.map((item, i) => ({
     item,
-    checked: flagList[i] === "1",
+    checked: (flagList[i] ?? "0") === "1",
   }));
 }
 
@@ -707,7 +712,7 @@ export type TableShape = TLBaseShape<
   }
 >;
 
-function parseTable(cells: string): string[][] {
+export function parseTable(cells: string): string[][] {
   return cells.split("\n").map((row) => row.split("\t"));
 }
 
