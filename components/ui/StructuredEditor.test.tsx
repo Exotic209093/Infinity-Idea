@@ -53,6 +53,7 @@ describe("<StructuredEditor> rendering", () => {
 
 describe("<StructuredEditor> mutations", () => {
   it("typing into a text cell calls onChange with a serialized patch", () => {
+    vi.useFakeTimers();
     const schema = SCHEMAS[CUSTOM_SHAPE_TYPES.permissionMatrix];
     const onChange = vi.fn();
     render(
@@ -64,10 +65,13 @@ describe("<StructuredEditor> mutations", () => {
       />,
     );
     fireEvent.change(screen.getByDisplayValue("Account"), { target: { value: "Lead" } });
+    vi.advanceTimersByTime(45);
     expect(onChange).toHaveBeenCalledWith({ rows: "Lead | 1 | 0 | 0 | 0 | 0" });
+    vi.useRealTimers();
   });
 
   it("clicking Add row appends an empty row", () => {
+    vi.useFakeTimers();
     const schema = SCHEMAS[CUSTOM_SHAPE_TYPES.checklist];
     const onChange = vi.fn();
     render(
@@ -79,10 +83,13 @@ describe("<StructuredEditor> mutations", () => {
       />,
     );
     fireEvent.click(screen.getByRole("button", { name: /add row/i }));
+    vi.advanceTimersByTime(45);
     expect(onChange).toHaveBeenCalledWith({ items: "a\n", checked: "00" });
+    vi.useRealTimers();
   });
 
   it("clicking Delete row removes the row", () => {
+    vi.useFakeTimers();
     const schema = SCHEMAS[CUSTOM_SHAPE_TYPES.checklist];
     const onChange = vi.fn();
     render(
@@ -95,6 +102,52 @@ describe("<StructuredEditor> mutations", () => {
     );
     const deleteButtons = screen.getAllByRole("button", { name: /delete row/i });
     fireEvent.click(deleteButtons[0]);
+    vi.advanceTimersByTime(45);
     expect(onChange).toHaveBeenCalledWith({ items: "b", checked: "0" });
+    vi.useRealTimers();
+  });
+});
+
+describe("<StructuredEditor> debounce", () => {
+  it("rapid typing produces one onChange after the idle window", () => {
+    vi.useFakeTimers();
+    const schema = SCHEMAS[CUSTOM_SHAPE_TYPES.checklist];
+    const onChange = vi.fn();
+    render(
+      <StructuredEditor
+        mode="full"
+        schema={schema}
+        shapeProps={{ items: "a", checked: "0" }}
+        onChange={onChange}
+      />,
+    );
+    const input = screen.getByDisplayValue("a") as HTMLInputElement;
+    fireEvent.change(input, { target: { value: "ab" } });
+    fireEvent.change(input, { target: { value: "abc" } });
+    fireEvent.change(input, { target: { value: "abcd" } });
+    expect(onChange).not.toHaveBeenCalled();
+    vi.advanceTimersByTime(45);
+    expect(onChange).toHaveBeenCalledTimes(1);
+    expect(onChange).toHaveBeenLastCalledWith({ items: "abcd", checked: "0" });
+    vi.useRealTimers();
+  });
+
+  it("blur flushes immediately even before the debounce fires", () => {
+    vi.useFakeTimers();
+    const schema = SCHEMAS[CUSTOM_SHAPE_TYPES.checklist];
+    const onChange = vi.fn();
+    render(
+      <StructuredEditor
+        mode="full"
+        schema={schema}
+        shapeProps={{ items: "a", checked: "0" }}
+        onChange={onChange}
+      />,
+    );
+    const input = screen.getByDisplayValue("a") as HTMLInputElement;
+    fireEvent.change(input, { target: { value: "x" } });
+    fireEvent.blur(input);
+    expect(onChange).toHaveBeenCalledWith({ items: "x", checked: "0" });
+    vi.useRealTimers();
   });
 });

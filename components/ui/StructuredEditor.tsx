@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Maximize2, Plus, Trash2, GripVertical } from "lucide-react";
 import type { Column, ColumnSchema, Row } from "@/lib/shapeSchemas";
 
@@ -35,9 +35,35 @@ export function StructuredEditor({ mode, schema, shapeProps, onChange, onOpenFul
   const showHeaders = mode === "full" || columns.length > 2;
   const compact = mode === "compact";
 
+  const pendingPatchRef = useRef<Record<string, string> | null>(null);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const cancelDebounce = () => {
+    if (debounceRef.current) {
+      clearTimeout(debounceRef.current);
+      debounceRef.current = null;
+    }
+  };
+
+  const flushPending = () => {
+    cancelDebounce();
+    const pending = pendingPatchRef.current;
+    if (pending) {
+      pendingPatchRef.current = null;
+      onChange(pending);
+    }
+  };
+
+  // Flush in-flight changes when the editor unmounts so closing the popout
+  // or deselecting the shape never loses the last 40 ms of typing.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => () => flushPending(), []);
+
   const flush = (next: Row[]) => {
     setRows(next);
-    onChange(schema.serialize(next));
+    pendingPatchRef.current = schema.serialize(next);
+    cancelDebounce();
+    debounceRef.current = setTimeout(flushPending, 40);
   };
 
   const setCell = (rowIdx: number, key: string, value: unknown) => {
@@ -111,6 +137,7 @@ export function StructuredEditor({ mode, schema, shapeProps, onChange, onOpenFul
             onDragOver={onDragOver}
             onDrop={onDrop(rowIdx)}
             onDragEnd={() => setDragFrom(null)}
+            onBlur={flushPending}
             className={`flex items-center gap-1 ${compact ? "py-0.5" : "py-1.5"} ${dragFrom === rowIdx ? "opacity-50" : ""}`}
           >
             <GripVertical size={12} className="text-white/30" />
