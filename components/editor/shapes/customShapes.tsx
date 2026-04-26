@@ -555,6 +555,26 @@ export type ChecklistShape = TLBaseShape<
  * Items and checked states are serialized as strings (newline-delimited items,
  * "1"/"0" flags) so the shape props remain primitive and round-trip cleanly.
  */
+export type ParsedChecklistItem = { item: string; checked: boolean };
+
+export function parseChecklistItems(items: string, checked: string): ParsedChecklistItem[] {
+  const itemList = items.split("\n");
+  const flagList = checked.split("");
+  return itemList.map((item, i) => ({
+    item,
+    checked: flagList[i] === "1",
+  }));
+}
+
+export function serializeChecklistItems(rows: ParsedChecklistItem[]): { items: string; checked: string } {
+  return {
+    items: rows.map((r) => r.item).join("\n"),
+    checked: rows.map((r) => (r.checked ? "1" : "0")).join(""),
+  };
+}
+
+// Kept for the existing ChecklistShapeUtil.component implementation that
+// reads items/checked separately. The new editor uses the typed pair above.
 function splitItems(s: string): string[] {
   return s.split("\n");
 }
@@ -689,6 +709,10 @@ export type TableShape = TLBaseShape<
 
 function parseTable(cells: string): string[][] {
   return cells.split("\n").map((row) => row.split("\t"));
+}
+
+export function serializeTable(rows: string[][]): string {
+  return rows.map((row) => row.join("\t")).join("\n");
 }
 
 export class TableShapeUtil extends BaseBoxShapeUtil<TableShape> {
