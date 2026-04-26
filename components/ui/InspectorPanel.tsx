@@ -1,10 +1,13 @@
 "use client";
 
-import { memo, useMemo } from "react";
+import { memo, useMemo, useState } from "react";
 import type { Editor, TLShape } from "tldraw";
 import { Bookmark, Pin, PinOff } from "lucide-react";
 import { CUSTOM_SHAPE_TYPES } from "@/types/shapes";
 import { usePanelWidth } from "@/lib/panelWidth";
+import { StructuredEditor } from "./StructuredEditor";
+import { StructuredEditorDialog } from "./StructuredEditorDialog";
+import { SCHEMAS } from "@/lib/shapeSchemas";
 
 type Props = {
   editor: Editor | null;
@@ -23,8 +26,8 @@ export const InspectorPanel = memo(function InspectorPanel({
 }: Props) {
   const { width, onResizeStart } = usePanelWidth({
     key: "infinite-idea:inspector-width",
-    defaultWidth: 288,
-    min: 240,
+    defaultWidth: 320,
+    min: 280,
     max: 440,
     side: "left",
   });
@@ -117,6 +120,8 @@ function ShapeFields({
   shape: TLShape;
 }) {
   const props = shape.props as Record<string, unknown>;
+  const schema = SCHEMAS[shape.type];
+  const [dialogOpen, setDialogOpen] = useState(false);
 
   const update = (partial: Record<string, unknown>) => {
     if (!editor) return;
@@ -219,30 +224,6 @@ function ShapeFields({
         />
       )}
 
-      {shape.type === CUSTOM_SHAPE_TYPES.checklist && (
-        <TextField
-          label="Items (one per line)"
-          value={String(props.items ?? "")}
-          onChange={(v) => {
-            const count = v.split("\n").length;
-            const prev = String(props.checked ?? "");
-            // Preserve existing check state; pad / trim to match new item count.
-            const normalized = (prev + "0".repeat(count)).slice(0, count);
-            update({ items: v, checked: normalized });
-          }}
-          multiline
-        />
-      )}
-
-      {shape.type === CUSTOM_SHAPE_TYPES.table && (
-        <TextField
-          label="Rows (tab between cells, newline between rows)"
-          value={String(props.cells ?? "")}
-          onChange={(v) => update({ cells: v })}
-          multiline
-        />
-      )}
-
       {shape.type === CUSTOM_SHAPE_TYPES.quote && (
         <>
           <TextField
@@ -303,28 +284,6 @@ function ShapeFields({
             ]}
             onChange={(v) => update({ sobjectType: v })}
           />
-          <TextField
-            label="Fields (one per line)"
-            value={String(props.fields ?? "")}
-            onChange={(v) => update({ fields: v })}
-            placeholder="Name | type | flags | refTo"
-            multiline
-          />
-          <HelpCard title="Format">
-            <code className="text-[10px] text-white/70">Name | type | flags | refTo</code>
-            <div className="mt-2 text-white/55">
-              Types: id, text, textarea, email, phone, url, number, currency,
-              percent, date, datetime, time, picklist, multipicklist, checkbox,
-              lookup, masterDetail, formula, autoNumber, rollup, geolocation.
-            </div>
-            <div className="mt-1 text-white/55">
-              Flags: <code className="text-white/70">req</code>,{" "}
-              <code className="text-white/70">unq</code>,{" "}
-              <code className="text-white/70">ext</code>,{" "}
-              <code className="text-white/70">pk</code>. refTo names another
-              SObject.
-            </div>
-          </HelpCard>
         </>
       )}
 
@@ -368,28 +327,6 @@ function ShapeFields({
             ]}
             onChange={(v) => update({ sharing: v })}
           />
-          <TextField
-            label="Members (one per line)"
-            value={String(props.members ?? "")}
-            onChange={(v) => update({ members: v })}
-            placeholder="name(args): Return | modifiers"
-            multiline
-          />
-          <HelpCard title="Format">
-            <code className="text-[10px] text-white/70">
-              methodName(args): Return | modifiers
-            </code>
-            <div className="mt-2 text-white/55">
-              Modifiers comma-separated:{" "}
-              <code className="text-white/70">public</code>,{" "}
-              <code className="text-white/70">global</code>,{" "}
-              <code className="text-white/70">private</code>,{" "}
-              <code className="text-white/70">static</code>,{" "}
-              <code className="text-white/70">virtual</code>,{" "}
-              <code className="text-white/70">override</code>,{" "}
-              <code className="text-white/70">abstract</code>.
-            </div>
-          </HelpCard>
         </>
       )}
 
@@ -430,23 +367,6 @@ function ShapeFields({
             value={String(props.profile ?? "")}
             onChange={(v) => update({ profile: v })}
           />
-          <TextField
-            label="Rows (one per line)"
-            value={String(props.rows ?? "")}
-            onChange={(v) => update({ rows: v })}
-            placeholder="Object | C | R | U | D | X"
-            multiline
-          />
-          <HelpCard title="Format">
-            <code className="text-[10px] text-white/70">
-              Object | C | R | U | D | X
-            </code>
-            <div className="mt-2 text-white/55">
-              Use <code className="text-white/70">1</code> /{" "}
-              <code className="text-white/70">0</code> (or yes/no) per column.
-              Columns are Create, Read, Update, Delete, Modify All.
-            </div>
-          </HelpCard>
         </>
       )}
 
@@ -577,22 +497,6 @@ function ShapeFields({
             onChange={(v) => update({ entryCriteria: v })}
             multiline
           />
-          <TextField
-            label="Steps (one per line)"
-            value={String(props.steps ?? "")}
-            onChange={(v) => update({ steps: v })}
-            placeholder="Step name | Approver | Criteria"
-            multiline
-          />
-          <HelpCard title="Step format">
-            <code className="text-[10px] text-white/70">
-              Step name | Approver | Criteria
-            </code>
-            <div className="mt-2 text-white/55">
-              Approver is shown next to the step number; criteria appears below
-              it in monospace.
-            </div>
-          </HelpCard>
         </>
       )}
 
@@ -632,6 +536,28 @@ function ShapeFields({
             onChange={(v) => update({ limit: v })}
             placeholder="e.g. 100"
           />
+        </>
+      )}
+
+      {schema && (
+        <>
+          <StructuredEditor
+            mode="compact"
+            schema={schema}
+            shapeProps={props}
+            onChange={update}
+            onOpenFull={() => setDialogOpen(true)}
+          />
+          {dialogOpen && (
+            <StructuredEditorDialog
+              open={dialogOpen}
+              onClose={() => setDialogOpen(false)}
+              title={schemaDialogTitle(shape.type)}
+              schema={schema}
+              shapeProps={props}
+              onChange={update}
+            />
+          )}
         </>
       )}
 
@@ -707,21 +633,6 @@ function NumberField({
   );
 }
 
-function HelpCard({
-  title,
-  children,
-}: {
-  title: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <div className="rounded-md border border-white/10 bg-white/[0.03] p-2 text-[11px] leading-snug text-white/55">
-      <div className="mb-1 font-semibold text-white/75">{title}</div>
-      {children}
-    </div>
-  );
-}
-
 function SelectField({
   label,
   value,
@@ -751,4 +662,16 @@ function SelectField({
       </select>
     </label>
   );
+}
+
+function schemaDialogTitle(type: string): string {
+  switch (type) {
+    case "sobject": return "Edit fields";
+    case "apexClass": return "Edit members";
+    case "permissionMatrix": return "Edit permissions";
+    case "approvalProcess": return "Edit approval steps";
+    case "checklist": return "Edit checklist";
+    case "table": return "Edit table";
+    default: return "Edit";
+  }
 }
