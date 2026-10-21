@@ -4,6 +4,8 @@ A browser-based documentation & graphics tool for producing amazing, easy-to-fol
 
 Built on Next.js + tldraw, deployed on Vercel.
 
+[![Infinite Idea with the Salesforce Architecture template open](docs/screenshot.png)](https://infinity-idea.vercel.app)
+
 ## Stack
 
 | Layer | Choice |
